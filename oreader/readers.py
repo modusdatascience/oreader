@@ -15,7 +15,7 @@ class ReaderCollection(object):#Done
         for name, reader in self.readers.iteritems():
             try:
                 self._peeks[name] = reader.next()
-            except StopIteration:
+            except StopIteration: # OK
                 self.readers[name].close()
         self.update()
         
@@ -173,12 +173,17 @@ class SqaState(object):
 #                 print self.last_result.values()
 #                 print [col.name for col in self.table.columns]
                 raise
-            
+        
+        # yield_per is implemented using limit instead of using yield_per.  This is more efficient in terms of
+        # memory for backends that don't support streaming results.
+        if self.yield_per is not None:
+            expr = expr.limit(self.yield_per)
+        
         try:
 #             print expr
             self.result_proxy = self.engine.execute(expr)
-            if self.yield_per is not None:
-                self.result_proxy = self.result_proxy.yield_per(self.yield_per)
+#             if self.yield_per is not None:
+#                 self.result_proxy = self.result_proxy.yield_per(self.yield_per)
         except:
 #             warnings.warn('Failure to execute query on %s reader.  Query:\n%s' % (self.klass.__name__, str(expr)))
 #             traceback.print_exc()
@@ -186,17 +191,26 @@ class SqaState(object):
             
     def next(self):
         attempt = 0
+        stop_count = 0
         if self.uncalled:
             self.fresh_result_proxy()
             self.uncalled = False
         while attempt < self.n_tries:
             try:
                 result = self.result_proxy.fetchone()
-                if result is not None and len(result._row) == 0:
-#                     print 'EMPTY ROW:', self.klass.__name__, 'after:', self.last_result 
-                    raise ValueError
-                self.last_result = result
-                return result
+                # If using yield_per, the end of a result proxy may not be the end of the relevant
+                # results because yield_per is implemented using limits (instead of using sqlalchemy's
+                # yield_per).  This way is more memory efficient for more different backends and reduces 
+                # initial loading time.
+                if self.yield_per is not None and result is None and stop_count == 0:
+                    stop_count += 1
+                    self.fresh_result_proxy()
+                else:
+                    if result is not None and len(result._row) == 0:
+                        print 'EMPTY ROW:', self.klass.__name__, 'after:', self.last_result 
+                        raise ValueError
+                    self.last_result = result
+                    return result
             except StopIteration:
                 raise
             except:
@@ -204,7 +218,7 @@ class SqaState(object):
                     warnings.warn('Lost connection for %s reader.  Trying to re-establish.' % self.klass.__name__)
                 time.sleep(self.wait)
                 self.fresh_result_proxy()
-            attempt += 1
+                attempt += 1
     
     def close(self):
         self.result_proxy.close()
@@ -266,7 +280,7 @@ class SimpleReader(Reader):
         try:
             self.current_source = self.config.start_source(self, self.sources[self.source_index])
         except IndexError:
-            raise StopIteration
+            raise StopIteration # OK
     
     def translate(self, raw):
         return self.config.translate(self, raw)
@@ -274,12 +288,13 @@ class SimpleReader(Reader):
     def update(self):
         try:
             self._peek = self.translate(self.current_source.next())
-        except StopIteration:
+        except StopIteration: # OK
             try:
                 self.next_source()
                 self._peek = self.translate(self.current_source.next())
-            except StopIteration:
+            except StopIteration: # OK
                 self._peek = None
+#                 print self.klass, None
 #         print self.klass, self.peek(), self.peek().identity_key()
     
     def report(self):
@@ -387,7 +402,7 @@ class PolymorphicReader(Reader):#Done
     def update(self):
         try:
             self._peek = self.readers.next()
-        except StopIteration:
+        except StopIteration: # OK
             self._peek = None
     
     def close(self):
