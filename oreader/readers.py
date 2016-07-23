@@ -150,6 +150,8 @@ class SqaState(object):
 #                 print and_(self.starter, self.filter)
                 if self.starter is not None:
                     expr = expr.where(and_(self.starter, self.filter))
+                else:
+                    expr = expr.where(self.filter)
             except:
 #                 print self.klass
 #                 print self.last_result
