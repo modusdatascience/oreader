@@ -7,9 +7,12 @@ from readers import PolymorphicReader, CompoundReader, ImplicitReader,\
 import random
 from frozendict import frozendict
 import pickle
-from oreader.readers import SimpleReaderConfig
+from oreader.reader_configs import SimpleReaderConfig
 from sqlalchemy.sql.sqltypes import String, Text, Float, Integer, Date, Boolean
 from decimal import Decimal
+from oreader.writers import SimpleWriter, PolymorphicWriter, CompoundWriter,\
+    ImplicitWriter
+from oreader.writer_configs import SimpleWriterConfig
 
 class Interval(object):
     def __init__(self, lower=float('-inf'), lower_closed = True, upper = float('inf'), upper_closed=False):
@@ -251,12 +254,18 @@ def _relate(cls, relationships):
         
 def relate(relationships):
     return lambda cls: _relate(cls, relationships)
+# 
+# def _sub(cls, sub):
+#     cls.subs = cls.subs + (sub,)
+#  
+# def sub(cls):
+#     return lambda cls: _sub(cls, self)
 
-def _sub(cls, sub):
-    cls.subs = cls.subs + (sub,)
-
-def sub(cls):
-    return lambda cls: _sub(cls, self)
+# def sub(super_class):
+#     def set_sub(klass):
+#         super_class.subs = super_class.subs + (klass,)
+#         return klass
+#     return set_sub
 
 class CsvColumn(object):
     def __init__(self, **kwargs):
@@ -270,7 +279,7 @@ class CsvColumn(object):
 class StringColumn(CsvColumn):
     def __init__(self, **kwargs):
         super(StringColumn,self).__init__(**kwargs)
-        self.strip = True if kwargs['format'] == 'strip' else False
+        self.strip = True if kwargs.get('format', None) == 'strip' else False
         
     def convert(self, value):
         if value is None:
@@ -325,7 +334,7 @@ class IntegerColumn(CsvColumn):
 class DateColumn(CsvColumn):
     def __init__(self, **kwargs):
         super(DateColumn,self).__init__(**kwargs)
-        self.format = kwargs['format']
+        self.format = kwargs.get('format', '%Y-%m-%d')
         
     def convert(self, value):
         if value is None:
@@ -351,7 +360,7 @@ class DateColumn(CsvColumn):
 class DateTimeColumn(CsvColumn):
     def __init__(self, **kwargs):
         super(DateTimeColumn,self).__init__(**kwargs)
-        self.format = kwargs['format']
+        self.format = kwargs.get('format', '%Y-%m-%d %H:%M:%S')
         
     def convert(self, value):
         if value is None:
@@ -542,7 +551,7 @@ class DataObject(object):
         
     def __eq__(self, other):
         # TODO: This could be made much faster by a custom implementation
-        return pickle.dumps(self) == pickle.dumps(other)
+        return self.__class__ is other.__class__ and self.__getstate__() == other.__getstate__()
     
     def __hash__(self):
         return hash(pickle.dumps(self))
@@ -591,7 +600,7 @@ class DataObject(object):
 #             cls._relationships[cls] = {}
 #             return cls._relationships[cls]
     
-    subs = tuple()
+#     subs = tuple()
     
     @abstractmethod
     @classproperty
@@ -601,14 +610,42 @@ class DataObject(object):
         raise NotImplementedError
     
     @abstractmethod
+    def set_container_key(self, key):
+        translation = self.translate_container_key(key)
+        for k, v in translation.items():
+            setattr(self, k, v)
+            
+    @classmethod
+    def translate_container_key(cls, key):
+        result = {}
+        for k, v in cls.container_key_:
+            result[v] =  key[k]
+        return result
+    
+    @abstractmethod
+    def set_identity_key(self, key):
+        translation = self.translate_identity_key(key)
+        for k, v in translation.items():
+            setattr(self, k, v)
+            
+    @classmethod
+    def translate_identity_key(cls, key):
+        result = {}
+        for k, v in cls.identity_key_:
+            result[v] =  key[k]
+        return result
+    
+    @abstractmethod
     def container_key(self):
-        print self
-        raise NotImplementedError
+        return {k: getattr(self, v) for k, v in self.container_key_}
+#         print self
+#         raise NotImplementedError
     
     @abstractmethod
     def identity_key(self):
-        print self
-        raise NotImplementedError
+        return {k: getattr(self, v) for k, v in self.identity_key_}
+#         print self
+#         raise NotImplementedError
     
     def sort_key(self):
         return tuple(getattr(self,key) for key in self.sort_key_)
@@ -661,11 +698,11 @@ class DataObject(object):
     
     @classmethod
     def concrete(cls):
-        return not cls.subs()
+        return not cls.__subclasses__()
     
     @classmethod
     def reader_class(cls, config):
-        if cls.subs:
+        if cls.__subclasses__():
             assert cls not in config
             return PolymorphicReader
         elif cls.relationships:
@@ -677,11 +714,30 @@ class DataObject(object):
             assert cls in config
             assert isinstance(config[cls], SimpleReaderConfig)
             return SimpleReader
-        
+    
+    @classmethod
+    def writer_class(cls, config):
+        if cls.__subclasses__():
+            assert cls not in config
+            return PolymorphicWriter
+        elif cls.relationships:
+            if cls in config:
+                return CompoundWriter
+            else:
+                return ImplicitWriter
+        else:
+            assert cls in config
+            assert isinstance(config[cls], SimpleWriterConfig)
+            return SimpleWriter
+    
     @classmethod
     def reader(cls, config):
         return cls.reader_class(config)(cls,config)
-
+    
+    @classmethod
+    def writer(cls, config):
+        return cls.writer_class(config)(cls,config)
+    
 class ColumnGroup(object):
     def __init__(self, code=None, code_system=None, date=None, default_code_system=None):
         self.code_col = code
