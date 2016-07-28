@@ -13,7 +13,6 @@ from oreader.writers import SimpleWriter, PolymorphicWriter, CompoundWriter,\
     ImplicitWriter
 from oreader.writer_configs import SimpleWriterConfig
 
-
 class classproperty(property):
     def __get__(self, cls, owner):
         return self.fget.__get__(None, owner)()
@@ -23,7 +22,6 @@ def _backrelate(cls, relationships):
         d = {k: tuple([cls] + [v[i] for i in range(1,len(v))])}
         d.update(v[0].relationships)
         v[0].relationships = frozendict(d)
-#         v[0].relationships[k] = tuple([cls] + [v[i] for i in range(1,len(v))])#tuple(list(cls,*v[1:]))
         v[0].init_relationships()
     return cls
         
@@ -40,18 +38,6 @@ def _relate(cls, relationships):
         
 def relate(relationships):
     return lambda cls: _relate(cls, relationships)
-# 
-# def _sub(cls, sub):
-#     cls.subs = cls.subs + (sub,)
-#  
-# def sub(cls):
-#     return lambda cls: _sub(cls, self)
-
-# def sub(super_class):
-#     def set_sub(klass):
-#         super_class.subs = super_class.subs + (klass,)
-#         return klass
-#     return set_sub
 
 class CsvColumn(object):
     def __init__(self, **kwargs):
@@ -305,11 +291,6 @@ class DataObject(object):
     def header(cls):
         return [col.name for col in cls.columns]
     
-#    @abstractmethod
-#    @classmethod
-#    def reader_class(cls):
-#        pass
-    
     @classmethod
     def init_schema(cls):
         '''
@@ -380,14 +361,10 @@ class DataObject(object):
     @abstractmethod
     def container_key(self):
         return {k: getattr(self, v) for k, v in self.container_key_}
-#         print self
-#         raise NotImplementedError
     
     @abstractmethod
     def identity_key(self):
         return {k: getattr(self, v) for k, v in self.identity_key_}
-#         print self
-#         raise NotImplementedError
     
     def sort_key(self):
         return tuple(getattr(self,key) for key in self.sort_key_)
@@ -401,10 +378,6 @@ class DataObject(object):
     @classmethod
     def sort_column_names(cls):
         return cls.sort_key_
-#     @abstractmethod
-#     def sort_key(self):
-#         print self
-#         raise NotImplementedError
     
     def __lt__(self, other):
         if not isinstance(other,DataObject):

@@ -100,24 +100,13 @@ def test_read_write():
     class SchoolParent(object):
         def __init__(self, school_id):
             self.school_id = school_id
-#         
-#         identity_key_ = (('parent_id', 'parent_id'),)
-#         def random(self, parent=None):
-#     
-#     class RandomSchoolFactory(object):
-#         def __iter__(self):
-#     
+
     @schema([IntegerColumn(name='id'), StringColumn(name='name')])
     class School(EduObj):
         partition_attribute = 'id'
         identity_key_ = (('school_id', 'id'),)
-#         def identity_key(self):
-#             return {'school_id': self.id}
-
         sort_key_ = ('id',)
         container_key_ = (('school_id', 'id'),)
-#         def container_key(self):
-#             return {'school_id': self.id}
         
         @classmethod
         def random(cls, parent):
@@ -135,10 +124,6 @@ def test_read_write():
             for _ in range(n_contractors):
                 obj.contractors.append(cls.relationships['contractors'][0].random(obj))
             return obj
-#             n_teachers = np.random.binomial(n_students, .04)[0]
-#             n_administrators = 2 * np.random.binomial(n_teachers, .5)
-#             teachers = [cls.relationships['students'][0].random(obj) for _ in range(n_students)]
-#             obj.students = [cls.relationships['students'][0].random(obj) for _ in range(n_students)]
 
     class RandomSchoolFactory(object):
         def __iter__(self):
@@ -154,18 +139,11 @@ def test_read_write():
             klass = random.choice(cls.__subclasses__())
             return klass.random(parent)
     
-#     @sub(Employee)
     @schema([IntegerColumn(name='school_id'), IntegerColumn(name='id'), StringColumn(name='name')])
     class Teacher(Employee):
         identity_key_ = (('school_id', 'school_id'), ('teacher_id', 'id'))
-#         def identity_key(self):
-#             return {'school_id': self.school_id,
-#                     'id': self.id}
-
         sort_key_ = ('school_id', 'id')
         container_key_ = (('school_id', 'school_id'),)
-#         def container_key(self):
-#             return {'school_id': self.school_id}
         @classmethod
         def random(cls, parent):
             obj = cls()
@@ -181,16 +159,12 @@ def test_read_write():
                 obj.students.append(cls.relationships['students'][0].random(obj))
             return obj
             
-#     @sub(Employee)
     @schema([IntegerColumn(name='school_id'), IntegerColumn(name='id'), StringColumn(name='name')])
     class Administrator(Employee):
         identity_key_ = (('school_id', 'school_id'), ('administrator_id', 'id'))
-#         def identity_key(self):
-#             return {'school_id': self.school_id,
-#                     'id': self.id}
-
         sort_key_ = ('school_id', 'id')
         container_key_ = (('school_id', 'school_id'),)
+        
         @classmethod
         def random(cls, parent):
             obj = cls()
@@ -201,20 +175,14 @@ def test_read_write():
             else:
                 obj.id = 0
             return obj
-#         def container_key(self):
-#             return {'school_id': self.school_id}
-#     
+
     @schema([IntegerColumn(name='school_id'), IntegerColumn(name='teacher_id'), IntegerColumn(name='id'), StringColumn(name='name')])
     @backrelate({'students': (Teacher, True)})
     class Student(EduObj):
         identity_key_ = (('school_id', 'school_id'), ('teacher_id', 'teacher_id'), ('id', 'id'))
-#         def identity_key(self):
-#             return {'school_id': self.school_id,
-#                     'teacher_id': self.teacher_id,
-#                     'id': self.id}
-
         sort_key_ = ('school_id', 'teacher_id', 'id')
         container_key_ = (('school_id', 'school_id'), ('teacher_id', 'teacher_id'))
+
         @classmethod
         def random(cls, parent):
             obj = cls()
@@ -225,14 +193,6 @@ def test_read_write():
             else:
                 obj.id = 0
             return obj
-        
-#         def container_key(self):
-#             return {'school_id': self.school_id,
-#                     'teacher_id': self.teacher_id}
-#         def __init__(self, id, name, grade):
-#             self.id = id
-#             self.name = name
-#             self.grade = grade
     
     @schema([IntegerColumn(name='school_id'), IntegerColumn(name='id'), StringColumn(name='name')])
     @backrelate({'contractors': (School, True)})
@@ -260,13 +220,9 @@ def test_read_write():
     @backrelate({'invoices': (Contractor, True)})
     class Invoice(EduObj):
         identity_key_ = (('school_id', 'school_id'), ('contractor_id', 'contractor_id'), ('contractor_name', 'contractor_name'), ('id', 'id'))
-#         def identity_key(self):
-#             return {'school_id': self.school_id,
-#                     'contractor_id': self.contractor_id,
-#                     'id': self.id}
-
         sort_key_ = ('school_id', 'contractor_id', 'contractor_name', 'id')
         container_key_ = (('school_id', 'school_id'), ('contractor_id', 'contractor_id'), ('contractor_name', 'contractor_name'))
+
         @classmethod
         def random(cls, parent):
             obj = cls()
@@ -282,9 +238,6 @@ def test_read_write():
             else:
                 obj.date = datetime.date(1970, 1, 1) + date_offset + datetime.timedelta(days=np.random.geometric(.0002))
             return obj
-#         def container_key(self):
-#             return {'school_id': self.school_id,
-#                     'contractor_id': self.contractor_id}
     
     # Create in memory sqlite database with correct tables
     engine = create_engine('sqlite://')
