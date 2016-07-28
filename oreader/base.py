@@ -306,23 +306,7 @@ class DataObject(object):
         '''
         pass
     
-#     @abstractmethod
-#     @classproperty
-#     @classmethod
-#     def columns(cls):
-#         raise NotImplementedError
-    
     relationships = frozendict()
-#     @classproperty
-#     @classmethod
-#     def relationships(cls):#@NoSelf
-#         try:
-#             return cls._relationships[cls]
-#         except KeyError:
-#             cls._relationships[cls] = {}
-#             return cls._relationships[cls]
-    
-#     subs = tuple()
     
     @abstractmethod
     @classproperty
