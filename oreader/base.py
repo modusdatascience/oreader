@@ -8,229 +8,15 @@ import random
 from frozendict import frozendict
 import pickle
 from oreader.reader_configs import SimpleReaderConfig
-from sqlalchemy.sql.sqltypes import String, Text, Float, Integer, Date, Boolean
 from decimal import Decimal
 from oreader.writers import SimpleWriter, PolymorphicWriter, CompoundWriter,\
     ImplicitWriter
 from oreader.writer_configs import SimpleWriterConfig
 
-class Interval(object):
-    def __init__(self, lower=float('-inf'), lower_closed = True, upper = float('inf'), upper_closed=False):
-        self.lower = lower
-        self.lower_closed = lower_closed
-        self.upper = upper
-        self.upper_closed = upper_closed
-        
-    def __contains__(self, value):
-        return (self.lower < value and self.uper > value) or \
-            (self.lower_closed and self.value == self.lower) or \
-            (self.upper_closed and self.value == self.upper)
-    
-positive = Interval(lower = 0, lower_closed=False)
-nonnegative = Interval(lower = 0, lower_closed=True)
-negative = Interval(upper = 0, upper_closed=False)
-nonpositive = Interval(upper = 0, upper_closed=True)
-
-def all_or_none(collection, attribute, ignore={}):
-    if not collection:
-        return None
-    first = True
-    result = None
-    for item in collection:
-        try:
-            value = getattr(item,attribute)
-        except AttributeError:
-            continue
-        if value in ignore:
-            continue
-        if first:
-            result = value
-            first = False
-        elif value != result:
-            return None
-    return result
-        
-def all_or_raise(collection, attribute, ignore={}):
-    if not collection:
-        return None
-    first = True
-    result = None
-    for item in collection:
-        try:
-            value = getattr(item,attribute)
-        except AttributeError:
-            continue
-        if value in ignore:
-            continue
-        if first:
-            result = value
-            first = False
-        elif value != result:
-            raise ValueError
-    return result
-
-def mode(collection, attribute, ignore={None}):
-    values = defaultdict(int)
-    highest = 0
-    mode = None
-    for item in collection:
-        try:
-            value = getattr(item,attribute)
-        except AttributeError:
-            continue
-        if value in ignore:
-            continue
-        values[value] += 1
-        if values[value] > highest:
-            highest = values[value]
-            mode = value
-    return mode
-    
-def minimum(collection, attribute, ignore={None}, default=None):
-    first = True
-    result = default
-    for item in collection:
-        try:
-            value = getattr(item,attribute)
-        except AttributeError:
-            continue
-        if value in ignore:
-            continue
-        if first:
-            result = value
-            first = False
-        elif value < result:
-            result = value
-    return result
-
-def maximum(collection, attribute, ignore={None}, default=None):
-    first = True
-    result = default
-    for item in collection:
-        try:
-            value = getattr(item,attribute)
-        except AttributeError:
-            continue
-        if value in ignore:
-            continue
-        if first:
-            result = value
-            first = False
-        elif value > result:
-            result = value
-    return result
-
-
-def latest(collection, attribute, date_attribute, ignore={None}, default=None):
-    first = True
-    result = default
-    for item in collection:
-        try:
-            value = getattr(item, attribute)
-        except AttributeError:
-            continue
-        try:
-            date = getattr(item, date_attribute)
-        except AttributeError:
-            continue
-        if value in ignore:
-            continue
-        if first:
-            result = value
-            result_date = date
-            first = False
-        elif result_date < date:
-            result = value
-            result_date = date
-    return result
-
-
-def earliest(collection, attribute, date_attribute, ignore={None}, default=None):
-    first = True
-    result = default
-    for item in collection:
-        try:
-            value = getattr(item, attribute)
-        except AttributeError:
-            continue
-        try:
-            date = getattr(item, date_attribute)
-        except AttributeError:
-            continue
-        if value in ignore:
-            continue
-        if first:
-            result = value
-            result_date = date
-            first = False
-        elif result_date > date:
-            result = value
-            result_date = date
-    return result
-
-def total(collection, attribute, ignore={None}, default=None):
-    first = True
-    result = default
-    for item in collection:
-        try:
-            value = getattr(item, attribute)
-        except AttributeError:
-            continue
-        if value in ignore:
-            continue
-        if first:
-            result = value
-            first = False
-        else:
-            result += value
-    return result
-
-def concatenation(collection, attribute, ignore={None}, default=None):
-    first = True
-    result = default
-    for item in collection:
-        try:
-            value = getattr(item, attribute)
-        except AttributeError:
-            continue
-        try:
-            if value in ignore:
-                continue
-        except TypeError:
-            pass
-        if first:
-            result = value
-            first = False
-        else:
-            result += value
-    return result
-
-#
-#class FileMapper(object):
-#    '''Maps a data file (csv format or similar) to a DataObject class for the purpose of 
-#    reading.'''
 
 class classproperty(property):
     def __get__(self, cls, owner):
         return self.fget.__get__(None, owner)()
-
-#def noninherited(cls):
-#    return lambda value: _noninherited(value, cls)
-#
-#class _noninherited():
-#    def __init__(self, value, cls):
-#        self.value = value
-#        self.cls = cls
-#    
-#    def __get__(self, instance, owner):
-#        if instance.__class__ is self.cls:
-#            return self.value
-#        else:
-#            raise AttributeError
-#    
-#    def __set__(self, instance, value):
-#        if instance.__class__ is self.cls:
-#            self.value = value
 
 def _backrelate(cls, relationships):
     for k, v in relationships.iteritems():
@@ -455,57 +241,14 @@ sqa_args = {str: {'format': None},
             bool: {},
             Decimal: {}}
 
-def _schema(cls,columns,dx_groups=None,px_groups=None):
+def _schema(cls,columns):
     cls.columns = tuple(columns)
     cls.columns_by_name = frozendict([(col.name, col) for col in cls.columns])
-    cls._dx_groups = tuple(dx_groups) if dx_groups is not None else None
-    cls._px_groups = tuple(px_groups) if px_groups is not None else None
     cls.init_schema()
     return cls
     
-def schema(columns,dx_groups=None,px_groups=None):
-    return lambda cls: _schema(cls,columns,dx_groups=dx_groups,px_groups=px_groups)
-
-def process_groups(table):#names, group_members, groups):
-    dx_groups_dict = {}
-    px_groups_dict = {}
-    for _, row in table.iterrows():
-        try:
-            name = row['name']
-            member_type = row['member_type']
-            if member_type:
-                member_type = member_type.replace(' ','_')
-            group_type = row['group_type']
-            group_name = row['group']
-            code_system = row['code_system']
-        except KeyError:
-            return [], []
-        except:
-            raise
-        if group_type == 'procedure':
-            groups_dict = px_groups_dict
-        elif group_type == 'diagnosis':
-            groups_dict = dx_groups_dict
-        else:
-            continue
-        try:
-            groups_dict[group_name][member_type] = name
-        except KeyError:
-            groups_dict[group_name] = {member_type: name}
-        if code_system is not None:
-            try:
-                groups_dict[group_name]['default_code_system'] = code_system
-            except KeyError:
-                groups_dict[group_name] = {'default_code_system': code_system}
-            
-    dx_groups = []
-    px_groups = []
-    for d in dx_groups_dict.values():
-        dx_groups.append(ColumnGroup(**d))
-    for d in px_groups_dict.values():
-        px_groups.append(ColumnGroup(**d))
-    return dx_groups, px_groups
-            
+def schema(columns):
+    return lambda cls: _schema(cls,columns)
 
 def csv_schema(filename):
     table = pandas.read_csv(filename,dtype=object)
@@ -513,8 +256,7 @@ def csv_schema(filename):
     columns = []
     for _, row in table.iterrows():
         columns.append(types[row['type']](**row))
-    dx_groups, px_groups = process_groups(table)#['name'],table['group_member'],table['group'])
-    return schema(columns, dx_groups=dx_groups, px_groups=px_groups)
+    return schema(columns)
 
 def sqa_schema(table):
     columns = []
@@ -737,86 +479,4 @@ class DataObject(object):
     @classmethod
     def writer(cls, config):
         return cls.writer_class(config)(cls,config)
-    
-class ColumnGroup(object):
-    def __init__(self, code=None, code_system=None, date=None, default_code_system=None):
-        self.code_col = code
-        self.code_system_col = code_system
-        self.date_col = date
-        self.default_code_system = default_code_system
         
-    def emit(self, obj):
-        result = {}
-        if self.default_code_system is not None:
-            val = self.default_code_system
-            if val != '' and val is not None:
-                result['code_system'] = val
-        if self.code_col is not None:
-            val = getattr(obj,self.code_col)
-            if val != '' and val is not None:
-                result['code'] = getattr(obj,self.code_col)
-        if self.code_system_col is not None:
-            val = getattr(obj,self.code_system_col)
-            if val != '' and val is not None:
-                result['code_system'] = getattr(obj,self.code_system_col)
-        if self.date_col is not None:
-            val = getattr(obj,self.date_col)
-            if val != '' and val is not None:
-                result['date'] = getattr(obj,self.date_col)
-        return result
-
-class DiagnosisContainerMixIn(object):
-    @property
-    def diagnoses(self):
-        result = []
-        for group in self._dx_groups:
-            args = group.emit(self)
-            if hasattr(self, '_dx_aliases'):
-                if 'code_system' in args:
-                    args['code_system'] = self._dx_aliases[args['code_system']]
-            if hasattr(self, '_dx_transformers'):
-                if 'code' in args and 'code_system' in args:
-                    args['code'] = self._dx_transformers[args['code_system']](args['code'])
-                else:
-                    assert 'code' not in args#If there is no code_system then there should be no code
-            if 'code' in args:
-                result.append(self.dx_class(**args))
-        return result
-
-class ProcedureContainerMixIn(object):
-    @property
-    def procedures(self):
-        result = []
-        for group in self._px_groups:
-            args = group.emit(self)
-            if hasattr(self, '_px_aliases'):
-                if 'code_system' in args:
-                    args['code_system'] = self._px_aliases[args['code_system']]
-            if hasattr(self, '_px_transformers'):
-                if 'code' in args and 'code_system' in args:
-                    args['code'] = self._px_transformers[args['code_system']](args['code'])
-                else:
-                    assert 'code' not in args#If there is no code_system then there should be no code
-            if 'code' in args:
-                result.append(self.px_class(**args))
-        return result
-
-# class RevenueSourceContainerMixIn(object):
-#     @property
-#     def revenue_sources(self):
-#         result = []
-#         for group in self._rev_groups:
-#             args = group.emit(self)
-#             if hasattr(self, '_rev_aliases'):
-#                 if 'code_system' in args:
-#                     args['code_system'] = self._rev_aliases[args['code_system']]
-#             if hasattr(self, '_rev_transformers'):
-#                 if 'code' in args and 'code_system' in args:
-#                     args['code'] = self._rev_transformers[args['code_system']](args['code'])
-#                 else:
-#                     assert 'code' not in args#If there is no code_system then there should be no code
-#             if 'code' in args:
-#                 result.append(self.rev_class(**args))
-#         return result
-    
-    

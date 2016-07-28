@@ -11,7 +11,87 @@ import datetime
 from oreader.reader_configs import SqaReaderConfig
 from itertools import islice
 from nose.tools import assert_list_equal
+from oreader.groups import create_attribute_group_mixin,\
+    AttributeGroup, AttributeGroupList
 
+def take(n, iterable):
+    "Return first n items of the iterable as a list"
+    return list(islice(iterable, n))
+
+def test_attribute_groups():
+    class HCObj(DataObject):
+        partition_attribute = 'member_id'
+    
+    @schema([IntegerColumn(name='member_id'), StringColumn(name='name'), DateColumn(name='date_of_birth')])
+    class Member(HCObj):
+        identity_key_ = (('member_id', 'member_id'),)
+        sort_key_ = ('member_id',)
+        container_key_ = (('member_id', 'member_id'),)
+        
+        @classmethod
+        def random(cls, parent):
+            obj = cls()
+            obj.member_id = parent
+            obj.name = names.get_full_name()
+            obj.date_of_birth = datetime.date(1940, 1, 1) + datetime.timedelta(days=np.random.geometric(.00001))
+            n_claims = np.random.geometric(.1)
+            obj.claims = []
+            for _ in range(n_claims):
+                obj.claims.append(cls.relationships['claims'][0].random(obj))
+            return obj
+    
+    class RandomMemberFactory(object):
+        def __iter__(self):
+            i = 0
+            while True:
+                yield Member.random(i)
+                i += 1
+            
+    class Procedure(object):
+        def __init__(self, code, amount):
+            self.code = code
+            self.amount = amount
+        
+        def __nonzero__(self):
+            return self.code is not None
+    
+    px_codes = [str(i) for i in range(10000)]
+    
+    PxMixIn = create_attribute_group_mixin('PxMixIn', 
+                                 {'procedures': 
+                                  AttributeGroupList([AttributeGroup(Procedure, {'code': 'px%d' % i,
+                                                                                 'amount': 'px%d_amount' % i})
+                                                      for i in range(1,4)])})
+    
+    @schema([IntegerColumn(name='member_id'), IntegerColumn(name='claim_id'), StringColumn(name='px1'),
+             StringColumn(name='px2'), StringColumn(name='px3'), RealColumn(name='px1_amount'), 
+             RealColumn(name='px2_amount'), RealColumn(name='px3_amount')])
+    @backrelate({'claims': (Member, True)})
+    class Claim(HCObj, PxMixIn):
+        identity_key_ = (('member_id', 'member_id'), ('claim_id', 'claim_id'))
+        sort_key_ = ('member_id', 'claim_id')
+        container_key_ = (('member_id', 'member_id'),)
+        
+        @classmethod
+        def random(cls, parent):
+            obj = cls()
+            obj.set_container_key(parent.identity_key())
+            if parent.claims:
+                obj.claim_id = max([c.claim_id for c in parent.claims]) + 1
+            else:
+                obj.claim_id = 0
+            for i in range(1, random.choice([2,3,4])):
+                setattr(obj, 'px%d' % i, random.choice(px_codes))
+                setattr(obj, 'px%d_amount' % i, np.random.lognormal(mean=10., sigma=4.))
+            return obj
+    
+    members = take(3, RandomMemberFactory())
+    for member in members:
+        for claim in member.claims:
+            assert len(claim.procedures) in {1, 2, 3}
+            for px in claim.procedures:
+                assert type(px.code) is str
+                assert type(px.amount) is float
 
 def test_read_write():
     class EduObj(DataObject):
@@ -247,9 +327,6 @@ def test_read_write():
                      Invoice: SqaReaderConfig(invoices_table, engine)}
     
     # Generate some random data
-    def take(n, iterable):
-        "Return first n items of the iterable as a list"
-        return list(islice(iterable, n))
     schools = take(2, RandomSchoolFactory())
     writer = School.writer(writer_config)
     for school in schools:
@@ -259,6 +336,7 @@ def test_read_write():
     assert_list_equal(schools, read_schools)
     
 if __name__ == '__main__':
+    test_attribute_groups()
     test_read_write()
     print 'Success!'
 
