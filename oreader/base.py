@@ -1,5 +1,4 @@
 from abc import abstractmethod
-from collections import defaultdict
 import pandas
 import datetime
 from readers import PolymorphicReader, CompoundReader, ImplicitReader,\
