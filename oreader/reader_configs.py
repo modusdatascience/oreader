@@ -1,7 +1,7 @@
 import csv
 from sqlalchemy.sql.elements import True_
 from sqlalchemy.sql.expression import select, and_
-from oreader.util import vector_greater_than
+from oreader.util import vector_greater_than, DataSourceError
 import warnings
 import time
 
@@ -46,8 +46,8 @@ class SqaReaderState(object):
         self.wait = wait
         self.warn_every = warn_every
         self.last_result = None
-        self.uncalled = True
         self.yield_per = yield_per
+        self.result_proxy = None
         
     def __iter__(self):
         return self
@@ -92,23 +92,12 @@ class SqaReaderState(object):
         if self.yield_per is not None:
             expr = expr.limit(self.yield_per)
         
-        try:
-#             print expr
-            self.result_proxy = self.engine.execute(expr)
-#             if self.yield_per is not None:
-#                 self.result_proxy = self.result_proxy.yield_per(self.yield_per)
-        except:
-#             warnings.warn('Failure to execute query on %s reader.  Query:\n%s' % (self.klass.__name__, str(expr)))
-#             traceback.print_exc()
-            pass
+        self.result_proxy = self.engine.execute(expr)
             
     def next(self):
         attempt = 0
         stop_count = 0
-        if self.uncalled:
-            self.fresh_result_proxy()
-            self.uncalled = False
-        while attempt < self.n_tries:
+        while True:
             try:
                 result = self.result_proxy.fetchone()
                 # If using yield_per, the end of a result proxy may not be the end of the relevant
@@ -121,17 +110,26 @@ class SqaReaderState(object):
                 else:
                     if result is not None and len(result._row) == 0:
                         print 'EMPTY ROW:', self.klass.__name__, 'after:', self.last_result 
-                        raise ValueError
+                        raise ValueError()
                     self.last_result = result
                     return result
             except StopIteration:
                 raise
-            except:
+            except Exception as e:
                 if (attempt + 1) % self.warn_every == 0:
                     warnings.warn('Lost connection for %s reader.  Trying to re-establish.' % self.klass.__name__)
-                time.sleep(self.wait)
-                self.fresh_result_proxy()
+                if attempt > self.n_tries:
+                    raise DataSourceError(e)
                 attempt += 1
+                time.sleep(self.wait)
+                while True:
+                    try:
+                        self.fresh_result_proxy()
+                        break
+                    except Exception as e:
+                        if attempt > self.n_tries:
+                            raise DataSourceError(e)
+                        attempt += 1
     
     def close(self):
         self.result_proxy.close()

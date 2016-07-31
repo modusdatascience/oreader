@@ -21,3 +21,7 @@ def vector_greater_than(columns, values):
                             vector_greater_than(columns[1:], values[1:])))
         else:
             return columns[0] > values[0]
+
+class DataSourceError(Exception):
+    def __init__(self, error):
+        self.error = error

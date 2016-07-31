@@ -1,5 +1,6 @@
 import warnings
 import traceback
+from oreader.util import DataSourceError
 
 class ReaderCollection(object):#Done
     def __init__(self, klasses, config):
@@ -68,6 +69,8 @@ class Reader(object):
                 self.count += 1
                 self.update()
                 break
+            except DataSourceError as e:
+                raise e.error
             except:
                 warnings.warn('Problem reading %s object at position %d.  Skipping.' % (self.klass.__name__, self.count))
                 traceback.print_exc()
