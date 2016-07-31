@@ -207,6 +207,7 @@ types = {'string': StringColumn,
          'real': RealColumn,
          'integer': IntegerColumn,
          'date': DateColumn,
+         'datetime': DateTimeColumn,
          'boolean': BooleanColumn,
          'empty': EmptyColumn}
 
@@ -410,7 +411,7 @@ class DataObject(object):
                 return ImplicitReader
         else:
             assert cls in config
-            assert isinstance(config[cls], SimpleReaderConfig)
+            assert isinstance(config[cls], SimpleReaderConfig), 'No config found for class %s' % cls.__name__
             return SimpleReader
     
     @classmethod

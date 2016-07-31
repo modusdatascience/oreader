@@ -1,3 +1,4 @@
+from frozendict import frozendict
 
 class BaseAttributeGroup(object):
     def create_property(self, name):
@@ -23,10 +24,14 @@ class AttributeGroupList(BaseAttributeGroup):
         return filter(self.filter_function, [group.emit(obj) for group in self.attribute_groups])
     
 class BaseAtrributeGroupMixin(object):
-    pass
+    _attribute_groups = frozendict()
 
 def create_attribute_group_mixin(name, groups):
-    properties = {}
+    attributes = {}
     for attr_name, group in groups.items():
-        properties[attr_name] = group.create_property(attr_name)
-    return type(name, (BaseAtrributeGroupMixin,), properties)
+        attributes[attr_name] = group.create_property(attr_name)
+    klass = type(name, (BaseAtrributeGroupMixin,), attributes)
+    attribute_groups = dict(klass._attribute_groups)
+    attribute_groups.update(groups)
+    klass._attribute_groups = frozendict(attribute_groups)
+    return klass

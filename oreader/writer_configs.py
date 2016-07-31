@@ -1,4 +1,6 @@
 import csv
+import datetime
+from sqlalchemy.types import Date, DateTime, Time
 
 
 class SimpleWriterConfig(object):
@@ -64,14 +66,14 @@ class CsvWriterConfig(SimpleWriterConfig):
     def translate(self, writer, obj):
         if obj is None:
             return None
-        return [col.unconvert(getattr(obj, col.name)) for col in writer.klass.columns]
+        return [col.unconvert(getattr(obj, col.name, None)) for col in writer.klass.columns]
     
     def start_sink(self, writer):
         return CsvDataSink(self, writer)
     
     def stop_sink(self, sink):
         sink.close()
-            
+
 class SqaWriterConfig(SimpleWriterConfig):
     def __init__(self, table):
         self.table = table
@@ -79,7 +81,7 @@ class SqaWriterConfig(SimpleWriterConfig):
     def translate(self, writer, obj):
         if obj is None:
             return None
-        return {col.name: getattr(obj, col.name) for col in writer.klass.columns}
+        return {col.name: getattr(obj, col.name, None) for col in writer.klass.columns}
     
     def start_sink(self, writer):
         return SqaDataSink(self, writer)
