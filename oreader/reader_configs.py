@@ -1,9 +1,10 @@
 import csv
 from sqlalchemy.sql.elements import True_
 from sqlalchemy.sql.expression import select, and_
-from oreader.util import vector_greater_than, DataSourceError
+from oreader.util import vector_greater_than
 import warnings
 import time
+from oreader.readers import DataSourceError
 
 class SimpleReaderConfig(object):
     pass
@@ -57,34 +58,19 @@ class SqaReaderState(object):
         if self.last_result is None:
             try:
                 expr = select(self.table.columns).order_by(*[self.table.columns[nm] for nm in self.sort_key])
-#                 print self.filter
-#                 print and_(self.starter, self.filter)
                 if self.starter is not None:
                     expr = expr.where(and_(self.starter, self.filter))
                 else:
                     expr = expr.where(self.filter)
             except:
-#                 print self.klass
-#                 print self.last_result
-#                 print [col.name for col in self.table.columns]
                 raise
-#             self.expression.order_by(self.expression)
         else:
             try:
                 where_clause = vector_greater_than([self.table.columns[nm] for nm in self.sort_key], \
                                                   [self.last_result[n] for n in self.sort_index])
-#                 print where_clause
-#                 print {self.sort_key[i]: self.last_result[n] for i, n in enumerate(self.sort_index)}
-#                 print and_(where_clause, self.filter)
                 expr = (select(self.table.columns).order_by(*[self.table.columns[nm] for nm in self.sort_key]) \
                        .where(and_(where_clause, self.filter)))
-#                 tuple_(*[self.expression.columns[self.sort_key[i]] for i, n in enumerate(self.sort_index)]) > \
-#                             tuple_(*[self.last_result[n] for n in self.sort_index]))
-#                        for i, n in enumerate(self.sort_index)])))
             except:
-#                 print self.klass
-#                 print self.last_result.values()
-#                 print [col.name for col in self.table.columns]
                 raise
         
         # yield_per is implemented using limit instead of using yield_per.  This is more efficient in terms of

@@ -1,6 +1,15 @@
 import warnings
 import traceback
-from oreader.util import DataSourceError
+
+class DataSourceError(Exception):
+    '''
+    The Reader classes normally skip over exceptions with a warning.  However, when readers encounter 
+    DataSourceErrors they will instead raise the error which the DataSourceError is wrapping.  This 
+    mechanism allows data sources (such as provided by the SqaReaderConfig, to raise exceptions that will 
+    be propagated past the readers.
+    '''
+    def __init__(self, error):
+        self.error = error
 
 class ReaderCollection(object):#Done
     def __init__(self, klasses, config):
