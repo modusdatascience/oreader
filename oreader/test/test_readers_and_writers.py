@@ -9,14 +9,159 @@ import random
 import numpy as np
 import datetime
 from oreader.reader_configs import SqaReaderConfig
-from itertools import islice
-from nose.tools import assert_list_equal
+from itertools import islice, chain, cycle
+from nose.tools import assert_list_equal, assert_raises, assert_equal
 from oreader.groups import create_attribute_group_mixin,\
     AttributeGroup, AttributeGroupList
 
 def take(n, iterable):
     "Return first n items of the iterable as a list"
     return list(islice(iterable, n))
+
+def sqa_col(col):
+    if isinstance(col, IntegerColumn):
+        sqa_type = Integer()
+    elif isinstance(col, StringColumn):
+        sqa_type = String()
+    elif isinstance(col, RealColumn):
+        sqa_type = Float()
+    elif isinstance(col, DateColumn):
+        sqa_type = Date()
+    name = col.name
+    return Column(name, sqa_type)
+
+def table_from_class(klass, metadata, name):
+    cols = [sqa_col(col) for col in klass.columns]
+    return Table(name, metadata, *cols)
+
+def create_sqa_connection_handling_tester(engine_wrapper, assertion, reader_args={}):
+    '''
+    Generates a test function for testing an assertion about the behavior of 
+    the reader after the engine has been modified by engine_wrapper.  The intentions is that 
+    the engine_wrapper does something to make the data source unreliable and the
+    assertion ensures that the reader handles the situation correctly.
+    '''
+    
+    def tester():
+        class FooObj(DataObject):
+            partition_attribute = 'id'
+        
+        @schema([IntegerColumn(name='id')])
+        class Foo(FooObj):
+            identity_key_ = (('id', 'id'),)
+            sort_key_ = ('id',)
+        
+        # Create a test database and table
+        engine = create_engine('sqlite://')
+        metadata = MetaData(bind=engine)
+        foos_table = table_from_class(Foo, metadata, 'foos')
+        metadata.create_all()
+        
+        # Define the mapping between tables and objects for writing
+        writer_config = {Foo: SqaWriterConfig(foos_table),
+                        }
+        
+        # Define the mapping between tables and objects for reading
+        reader_config = {Foo: SqaReaderConfig(foos_table, engine_wrapper(engine), **reader_args)}
+        
+        # Create some objects
+        foos = [Foo(id=i) for i in range(1000)]
+        
+        # Write the objects to the database
+        writer = Foo.writer(writer_config)
+        for foo in foos:
+            writer.write(foo)
+        
+        def do_the_reading():
+            return [foo for foo in Foo.reader(reader_config)]
+        
+        assertion(do_the_reading)
+    
+    return tester
+
+class FaultyResultProxy(object):
+    def __init__(self, result_proxy, failure_generator):
+        self.result_proxy = result_proxy
+        self.failure_generator = failure_generator
+    
+    def fetchone(self, *args, **kwargs):
+        exc = self.failure_generator.next()
+        if exc:
+            raise exc 
+        return self.result_proxy.fetchone(*args, **kwargs)
+
+    def fetchmany(self, *args, **kwargs):
+        exc = self.failure_generator.next()
+        if exc:
+            raise exc 
+        return self.result_proxy.fetchmany(*args, **kwargs)
+    
+    def fetchall(self, *args, **kwargs):
+        exc = self.failure_generator.next()
+        if exc:
+            raise exc 
+        return self.result_proxy.fetchall(*args, **kwargs)
+    
+class FaultyEngine(object):
+    def __init__(self, engine, failure_generator, proxy_failure_generator_generator):
+        self.engine = engine
+        self.failure_generator = failure_generator
+        self.proxy_failure_generator_generator = proxy_failure_generator_generator
+
+    def execute(self, *args, **kwargs):
+        exc = self.failure_generator.next()
+        if exc:
+            raise exc 
+        return FaultyResultProxy(self.engine.execute(*args, **kwargs), self.proxy_failure_generator_generator.next())
+
+def fail_every_n_after_m(m, n, exc_func):
+    i = 1
+    while True:
+        if i > m and (i-m) % n == 0:
+            yield exc_func()
+        else:
+            yield False
+        i += 1
+
+def never_fail():
+    while True:
+        yield False
+
+# This initial result proxy fails after 10 successful reads.  Subsequent attempts to create a new result proxy from the engine fail.
+# This results in a ValueError after n_tries has been exhausted.
+test_failed_sqa_connection = create_sqa_connection_handling_tester(lambda eng: FaultyEngine(eng, fail_every_n_after_m(1, 1, ValueError), 
+                                                                                    chain([fail_every_n_after_m(10, 1, ValueError)], 
+                                                                                          cycle([never_fail()]))),
+                                                           lambda read: assert_raises(ValueError, read),
+                                                           {'n_tries': 5})
+    
+# This engine never fails to connect, but the resulting result proxies fail every 10 rows.  The reader should be able to handle this failure
+# rate without a problem.
+test_unreliable_sqa_connection = create_sqa_connection_handling_tester(lambda eng: FaultyEngine(eng, never_fail(), 
+                                                                                    cycle([fail_every_n_after_m(0, 10, ValueError)])),
+                                                           lambda read: [assert_equal(foo.id, i) for i, foo in enumerate(read())],
+                                                           {'n_tries': 5})
+    
+# This engine fails to connect every 5 tries. The result proxies fail every 10 rows.  The reader should be able to handle this failure
+# rate without a problem.
+test_unreliable_sqa_engine = create_sqa_connection_handling_tester(lambda eng: FaultyEngine(eng, fail_every_n_after_m(0, 5, ValueError), 
+                                                                                    cycle([fail_every_n_after_m(0, 10, ValueError)])),
+                                                           lambda read: [assert_equal(foo.id, i) for i, foo in enumerate(read())],
+                                                           {'n_tries': 5})
+
+# Fail on engine
+test_sqa_engine_fail = create_sqa_connection_handling_tester(lambda eng: FaultyEngine(eng, fail_every_n_after_m(1, 1, TypeError), 
+                                                                                    cycle([fail_every_n_after_m(0, 10, ValueError)])),
+                                                           lambda read: assert_raises(TypeError, read),
+                                                           {'n_tries': 5})
+
+# Fail on proxy
+test_sqa_proxy_fail = create_sqa_connection_handling_tester(lambda eng: FaultyEngine(eng, never_fail(), 
+                                                                                    chain([fail_every_n_after_m(0, 10, ValueError)],
+                                                                                          cycle([fail_every_n_after_m(0, 1, TypeError)]))),
+                                                           lambda read: assert_raises(TypeError, read),
+                                                           {'n_tries': 5})
+
 
 def test_attribute_groups():
     class HCObj(DataObject):
@@ -242,21 +387,7 @@ def test_read_write():
     # Create in memory sqlite database with correct tables
     engine = create_engine('sqlite://')
     metadata = MetaData(bind=engine)
-    def sqa_col(col):
-        if isinstance(col, IntegerColumn):
-            sqa_type = Integer()
-        elif isinstance(col, StringColumn):
-            sqa_type = String()
-        elif isinstance(col, RealColumn):
-            sqa_type = Float()
-        elif isinstance(col, DateColumn):
-            sqa_type = Date()
-        name = col.name
-        return Column(name, sqa_type)
     
-    def table_from_class(klass, metadata, name):
-        cols = [sqa_col(col) for col in klass.columns]
-        return Table(name, metadata, *cols)
     
     schools_table = table_from_class(School, metadata, 'schools')
     teachers_table = table_from_class(Teacher, metadata, 'teachers')
@@ -289,6 +420,11 @@ def test_read_write():
     assert_list_equal(schools, read_schools)
     
 if __name__ == '__main__':
+    test_failed_sqa_connection()
+    test_unreliable_sqa_connection()
+    test_unreliable_sqa_engine()
+    test_sqa_proxy_fail()
+    test_sqa_engine_fail()
     test_attribute_groups()
     test_read_write()
     print 'Success!'
