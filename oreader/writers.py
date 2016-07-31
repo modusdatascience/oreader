@@ -26,6 +26,9 @@ class SimpleWriter(Writer):
     def write(self, obj):
         self.sink.write(obj)
         
+    def close(self):
+        self.sink.close()
+    
 class PolymorphicWriter(Writer):
     def __init__(self, klass, config):
         super(PolymorphicWriter, self).__init__(klass, config)
@@ -65,7 +68,6 @@ class ImplicitWriter(Writer):
                     self.writers[name].write(child)
                     
     def close(self):
-        self.simple_writer.close()
         for writer in self.writers.values():
             writer.close()
 
