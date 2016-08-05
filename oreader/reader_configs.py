@@ -35,7 +35,7 @@ class CsvReaderConfig(TupleSimpleReaderConfig):
 
 class SqaReaderState(object):
     def __init__(self, table, engine, klass, starter, filter=True_(), n_tries=float('inf'), wait=0.1, warn_every=10,
-                 yield_per=None):
+                 limit_per=None, yield_per=None):
         self.table = table
         self.engine = engine
         self.klass = klass
@@ -47,6 +47,7 @@ class SqaReaderState(object):
         self.wait = wait
         self.warn_every = warn_every
         self.last_result = None
+        self.limit_per = limit_per
         self.yield_per = yield_per
         self.result_proxy = None
         
@@ -73,12 +74,13 @@ class SqaReaderState(object):
             except:
                 raise
         
-        # yield_per is implemented using limit instead of using yield_per.  This is more efficient in terms of
-        # memory for backends that don't support streaming results.
-        if self.yield_per is not None:
-            expr = expr.limit(self.yield_per)
+        if self.limit_per is not None:
+            expr = expr.limit(self.limit_per)
         
         self.result_proxy = self.engine.execute(expr)
+        
+        if self.yield_per is not None:
+            self.result_proxy = self.result_proxy.yield_per(self.yield_per)
             
     def next(self):
         attempt = 0
@@ -86,11 +88,11 @@ class SqaReaderState(object):
         while True:
             try:
                 result = self.result_proxy.fetchone()
-                # If using yield_per, the end of a result proxy may not be the end of the relevant
-                # results because yield_per is implemented using limits (instead of using sqlalchemy's
-                # yield_per).  This way is more memory efficient for more different backends and reduces 
-                # initial loading time.
-                if self.yield_per is not None and result is None and stop_count == 0:
+                # If using limit_per, the end of a result proxy may not be the end of the relevant
+                # results.  This way is more memory efficient for more different backends and reduces 
+                # initial loading time compared to yield_per, but may take longer in the end if a lot of 
+                # long running queries get repeated.
+                if self.limit_per is not None and result is None and stop_count == 0:
                     stop_count += 1
                     self.fresh_result_proxy()
                 else:
@@ -122,7 +124,7 @@ class SqaReaderState(object):
         
 class SqaReaderConfig(TupleSimpleReaderConfig):
     def __init__(self, expression, engine, starter=None, filter=True_(), n_tries=float('inf'), wait=0.1, warn_every=10,
-                 yield_per=None):
+                 limit_per=None, yield_per=None):
         self.expression = expression
         self.engine = engine
         self.starter = starter
@@ -130,6 +132,7 @@ class SqaReaderConfig(TupleSimpleReaderConfig):
         self.n_tries = n_tries
         self.wait = wait
         self.warn_every = warn_every
+        self.limit_per = limit_per
         self.yield_per = yield_per
         
     def start_source(self, reader, source):
@@ -141,6 +144,6 @@ class SqaReaderConfig(TupleSimpleReaderConfig):
     def get_sources(self, reader):
         return [SqaReaderState(self.expression, self.engine, reader.klass, self.starter, 
                          self.filter, self.n_tries, self.wait, self.warn_every, 
-                         self.yield_per)]
+                         limit_per=self.limit_per, yield_per=self.yield_per)]
     
 
