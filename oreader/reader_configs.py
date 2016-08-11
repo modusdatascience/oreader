@@ -54,8 +54,7 @@ class SqaReaderState(object):
     def __iter__(self):
         return self
     
-    def fresh_result_proxy(self):
-        self.result_proxy = None
+    def create_expression(self):
         if self.last_result is None:
             try:
                 expr = select(self.table.columns).order_by(*[self.table.columns[nm] for nm in self.sort_key])
@@ -76,7 +75,11 @@ class SqaReaderState(object):
         
         if self.limit_per is not None:
             expr = expr.limit(self.limit_per)
-        
+        return expr
+    
+    def fresh_result_proxy(self):
+        self.result_proxy = None
+        expr = self.create_expression()
         self.result_proxy = self.engine.execute(expr)
         
         if self.yield_per is not None:
@@ -145,5 +148,8 @@ class SqaReaderConfig(TupleSimpleReaderConfig):
         return [SqaReaderState(self.expression, self.engine, reader.klass, self.starter, 
                          self.filter, self.n_tries, self.wait, self.warn_every, 
                          limit_per=self.limit_per, yield_per=self.yield_per)]
-    
-
+        
+    def test_expression(self, klass):
+        expr = select(self.expression.columns).order_by(*[self.expression.columns[nm] for nm in klass.sort_column_names])
+        return expr
+        
