@@ -342,11 +342,9 @@ class DataObject(object):
             result[v] =  key[k]
         return result
     
-    @abstractmethod
     def container_key(self):
         return {k: getattr(self, v) for k, v in self.container_key_}
     
-    @abstractmethod
     def identity_key(self):
         return {k: getattr(self, v) for k, v in self.identity_key_}
     
