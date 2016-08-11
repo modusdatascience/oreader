@@ -16,13 +16,14 @@ class TupleSimpleReaderConfig(SimpleReaderConfig):
         return reader.klass(**dict(zip([col.name for col in reader.klass.columns], raw)))
 
 class CsvReaderConfig(TupleSimpleReaderConfig):
-    def __init__(self, files, header, csv_config={}):
+    def __init__(self, files, header, csv_config={}, opener=open):
         self.files = files
         self.header = header
         self.csv_config = csv_config
-    
+        self.opener = opener
+        
     def start_source(self, reader, filename):
-        result = csv.reader(open(filename, 'r'), **self.csv_config)
+        result = csv.reader(self.opener(filename, 'r'), **self.csv_config)
         if self.header:
             result.next()
         return result
