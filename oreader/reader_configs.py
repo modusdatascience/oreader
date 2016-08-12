@@ -153,4 +153,3 @@ class SqaReaderConfig(TupleSimpleReaderConfig):
     def test_expression(self, klass):
         expr = select(self.expression.columns).order_by(*[self.expression.columns[nm] for nm in klass.sort_column_names])
         return expr
-        
