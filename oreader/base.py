@@ -257,6 +257,8 @@ class DataObject(object):
             if column.name in kwargs:
                 setattr(self,column.name,column.convert(kwargs[column.name]))
                 del kwargs[column.name]
+            else:
+                setattr(self,column.name,None)
         if kwargs:
             raise TypeError('Unexpected argument(s) initializing %s: %s' % (self.__class__.__name__, str(kwargs)))
         for k, v in self.__class__.relationships.iteritems():
