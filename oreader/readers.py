@@ -70,7 +70,9 @@ class Reader(object):
         self.count = 0
         
     def next(self):
+        
         result = self.peek()
+        
         if result is None:
             raise StopIteration
         while True:
@@ -86,6 +88,8 @@ class Reader(object):
                 result = self.peek()
                 if result is None:
                     raise StopIteration
+#         print result
+#         print result.__dict__
         return result
     
     def peek(self):
@@ -118,6 +122,8 @@ class SimpleReader(Reader):
         self.source_index += 1
         try:
             self.current_source = self.config.start_source(self, self.sources[self.source_index])
+        except DataSourceError as e:
+            raise e.error
         except IndexError:
             raise StopIteration # OK
     
@@ -162,7 +168,7 @@ class CompoundReader(Reader):#Done
             return
         self._peek = self.simple_reader.next()
         while self.readers.peek() is not None and self.readers.peek().container_key() < self._peek.identity_key():
-#             warnings.warn('Orphaned %s with key %s.' % (self.readers.peek().__class__.__name__, str(self.readers.peek().identity_key())))
+            warnings.warn('Orphaned %s with key %s.' % (self.readers.peek().__class__.__name__, str(self.readers.peek().identity_key())))
             self.readers.next()
         while self.readers.peek() is not None and self.readers.peek().container_key() == self._peek.identity_key():
             found = False
