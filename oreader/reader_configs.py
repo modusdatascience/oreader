@@ -40,7 +40,7 @@ class CsvReaderConfig(TupleSimpleReaderConfig):
 
 class SqaReaderState(object):
     def __init__(self, table, engine, klass, starter, filter=True_(), n_tries=float('inf'), wait=0.1, warn_every=10,
-                 limit_per=None, stream=True):
+                 limit_per=None, stream=True, verbose=False):
         self.table = table
         self.engine = engine
         self.klass = klass
@@ -55,6 +55,7 @@ class SqaReaderState(object):
         self.limit_per = limit_per
         self.stream = stream
         self.result_proxy = None
+        self.verbose = verbose
         
     def __iter__(self):
         return self
@@ -89,9 +90,11 @@ class SqaReaderState(object):
     def fresh_result_proxy(self):
         self.result_proxy = None
         expr = self.create_expression()
-        print expr
+        if self.verbose:
+            print expr
         self.result_proxy = self.engine.execute(expr)
-        print 'okay'
+        if self.verbose:
+            print 'Okay'
         
 #         if self.stream is not None:
 #             self.result_proxy = self.result_proxy.stream(self.stream)
