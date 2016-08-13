@@ -318,7 +318,6 @@ class DataObject(object):
         print cls
         raise NotImplementedError
     
-    @abstractmethod
     def set_container_key(self, key):
         translation = self.translate_container_key(key)
         for k, v in translation.items():
@@ -331,7 +330,6 @@ class DataObject(object):
             result[v] =  key[k]
         return result
     
-    @abstractmethod
     def set_identity_key(self, key):
         translation = self.translate_identity_key(key)
         for k, v in translation.items():
@@ -363,6 +361,21 @@ class DataObject(object):
     def sort_column_names(cls):
         return cls.sort_key_
     
+#     def __richcmp__(DataObject self, DataObject other, int op):
+#         if op == 0:# <
+#             return self.sort_key() < other.sort_key()
+#         elif op == 1:# ==
+#             return self.__class__ is other.__class__ and self.__getstate__() == other.__getstate__()
+#         elif op == 2:# >
+#             return self.sort_key() > other.sort_key()
+#         elif op == 3:# <= 
+#             return self.sort_key() <= other.sort_key()
+#         elif op == 4:# != 
+#             return not (self.__class__ is other.__class__ and self.__getstate__() == other.__getstate__())
+#         elif op == 5:# >=
+#             return self.sort_key() >= other.sort_key()
+        
+    
     def __lt__(self, other):
         if not isinstance(other,DataObject):
             return NotImplemented
@@ -383,7 +396,7 @@ class DataObject(object):
         if not isinstance(other,DataObject):
             return NotImplemented
         try:
-            return self.sort_key() < other.sort_key()
+            return self.sort_key() > other.sort_key()
         except AttributeError:
             return NotImplemented
         
@@ -391,7 +404,7 @@ class DataObject(object):
         if not isinstance(other,DataObject):
             return NotImplemented
         try:
-            return self.sort_key() <= other.sort_key()
+            return self.sort_key() >= other.sort_key()
         except AttributeError:
             return NotImplemented
     
