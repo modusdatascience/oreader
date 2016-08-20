@@ -155,17 +155,28 @@ class DateTimeColumn(CsvColumn):
         return datetime.datetime.strftime(value,self.format)
 
 class BooleanColumn(CsvColumn):
+    true_flags = {'1', 1, 't', 'T', 'true', 'True', 1.0, '1.0', '1.'}
+    false_flags = {'0', 0, 'f', 'F', 'false', 'False', 0.0, '0.0', '0.'}
+    none_flags = {''}
     def convert(self, value):
         try:
             value = value.strip()
-            if value == '':
-                return None
+#             if value == '':
+#                 return None
         except AttributeError:
             pass
-        try:
-            return bool(value)
-        except ValueError:
+        if value in self.true_flags:
+            return True
+        elif value in self.false_flags:
+            return False
+        elif value in self.none_flags:
             return None
+        else:
+            raise ValueError('Cannot convert %s to boolean' % str(value))
+#         try:
+#             return bool(value)
+#         except ValueError:
+#             return None
     
     def unconvert(self, value):
         if value is None:

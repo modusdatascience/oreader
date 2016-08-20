@@ -15,6 +15,17 @@ class TupleSimpleReaderConfig(SimpleReaderConfig):
             return None
         return reader.klass(**dict(zip([col.name for col in reader.klass.columns], raw)))
 
+class CsvSource(object):
+    def __init__(self, infile, **config):
+        self.reader = csv.reader(infile, **config)
+        self.infile = infile
+        
+    def next(self):
+        return self.reader.next()
+    
+    def close(self):
+        return self.infile.close()
+
 class CsvReaderConfig(TupleSimpleReaderConfig):
     def __init__(self, files, header, csv_config={}, opener=open, skip=0):
         self.files = files
@@ -24,7 +35,7 @@ class CsvReaderConfig(TupleSimpleReaderConfig):
         self.skip = skip
         
     def start_source(self, reader, filename):
-        result = csv.reader(self.opener(filename, 'r'), **self.csv_config)
+        result = CsvSource(self.opener(filename, 'r'), **self.csv_config)
         if self.header:
             result.next()
         if self.skip:
