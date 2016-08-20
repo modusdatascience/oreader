@@ -34,7 +34,7 @@ def table_from_class(klass, metadata, name):
     cols = [sqa_col(col) for col in klass.columns]
     return Table(name, metadata, *cols)
 
-def create_sqa_connection_handling_tester(engine_wrapper, assertion, reader_args={}):
+def create_sqa_connection_handling_case(engine_wrapper, assertion, reader_args={}):
     '''
     Generates a test function for testing an assertion about the behavior of 
     the reader after the engine has been modified by engine_wrapper.  The intentions is that 
@@ -129,7 +129,7 @@ def never_fail():
 
 # This initial result proxy fails after 10 successful reads.  Subsequent attempts to create a new result proxy from the engine fail.
 # This results in a ValueError after n_tries has been exhausted.
-test_failed_sqa_connection = create_sqa_connection_handling_tester(lambda eng: FaultyEngine(eng, fail_every_n_after_m(1, 1, ValueError), 
+test_failed_sqa_connection = create_sqa_connection_handling_case(lambda eng: FaultyEngine(eng, fail_every_n_after_m(1, 1, ValueError), 
                                                                                     chain([fail_every_n_after_m(10, 1, ValueError)], 
                                                                                           cycle([never_fail()]))),
                                                            lambda read: assert_raises(ValueError, read),
@@ -137,26 +137,26 @@ test_failed_sqa_connection = create_sqa_connection_handling_tester(lambda eng: F
     
 # This engine never fails to connect, but the resulting result proxies fail every 10 rows.  The reader should be able to handle this failure
 # rate without a problem.
-test_unreliable_sqa_connection = create_sqa_connection_handling_tester(lambda eng: FaultyEngine(eng, never_fail(), 
+test_unreliable_sqa_connection = create_sqa_connection_handling_case(lambda eng: FaultyEngine(eng, never_fail(), 
                                                                                     cycle([fail_every_n_after_m(0, 10, ValueError)])),
                                                            lambda read: [assert_equal(foo.id, i) for i, foo in enumerate(read())],
                                                            {'n_tries': 5})
     
 # This engine fails to connect every 5 tries. The result proxies fail every 10 rows.  The reader should be able to handle this failure
 # rate without a problem.
-test_unreliable_sqa_engine = create_sqa_connection_handling_tester(lambda eng: FaultyEngine(eng, fail_every_n_after_m(0, 5, ValueError), 
+test_unreliable_sqa_engine = create_sqa_connection_handling_case(lambda eng: FaultyEngine(eng, fail_every_n_after_m(0, 5, ValueError), 
                                                                                     cycle([fail_every_n_after_m(0, 10, ValueError)])),
                                                            lambda read: [assert_equal(foo.id, i) for i, foo in enumerate(read())],
                                                            {'n_tries': 5})
 
 # Fail on engine
-test_sqa_engine_fail = create_sqa_connection_handling_tester(lambda eng: FaultyEngine(eng, fail_every_n_after_m(1, 1, TypeError), 
+test_sqa_engine_fail = create_sqa_connection_handling_case(lambda eng: FaultyEngine(eng, fail_every_n_after_m(1, 1, TypeError), 
                                                                                     cycle([fail_every_n_after_m(0, 10, ValueError)])),
                                                            lambda read: assert_raises(TypeError, read),
                                                            {'n_tries': 5})
 
 # Fail on proxy
-test_sqa_proxy_fail = create_sqa_connection_handling_tester(lambda eng: FaultyEngine(eng, never_fail(), 
+test_sqa_proxy_fail = create_sqa_connection_handling_case(lambda eng: FaultyEngine(eng, never_fail(), 
                                                                                     chain([fail_every_n_after_m(0, 10, ValueError)],
                                                                                           cycle([fail_every_n_after_m(0, 1, TypeError)]))),
                                                            lambda read: assert_raises(TypeError, read),
