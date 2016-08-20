@@ -1,5 +1,5 @@
 from oreader.base import DataObject, schema, IntegerColumn, StringColumn,\
-    RealColumn, DateColumn, backrelate
+    RealColumn, DateColumn, backrelate, relate
 from sqlalchemy.engine import create_engine
 from sqlalchemy.sql.schema import MetaData, Table, Column
 from sqlalchemy.sql.sqltypes import Integer, String, Float, Date
@@ -10,7 +10,9 @@ import numpy as np
 import datetime
 from oreader.reader_configs import SqaReaderConfig
 from itertools import islice, chain, cycle
-from nose.tools import assert_list_equal, assert_raises, assert_equal
+import unittest
+from frozendict import frozendict
+from nose.tools import assert_list_equal, assert_raises, assert_equal, eq_
 from oreader.groups import create_attribute_group_mixin,\
     AttributeGroup, AttributeGroupList
 
@@ -418,16 +420,57 @@ def test_read_write():
     reader = School.reader(reader_config)
     read_schools = list(reader)
     assert_list_equal(schools, read_schools)
-    
-if __name__ == '__main__':
-    test_failed_sqa_connection()
-    test_unreliable_sqa_connection()
-    test_unreliable_sqa_engine()
-    test_sqa_proxy_fail()
-    test_sqa_engine_fail()
-    test_attribute_groups()
-    test_read_write()
-    print 'Success!'
 
+
+class TestRelationships(unittest.TestCase):
+
+    def test_relate(self):
+        
+        class A(DataObject):
+            pass
+        
+        @relate({'a':(A,True)})
+        class B(DataObject):
+            pass
+        
+        class C(B):
+            pass
+        
+        class D(A):
+            pass
+        
+        eq_(B.relationships, frozendict({'a':(A,True)}))
+        eq_(A.relationships, frozendict({}))
+        eq_(C.relationships, frozendict({'a':(A,True)}))
+        eq_(D.relationships, frozendict({}))
+    
+    def test_backrelate(self):
+        class A(DataObject):
+            pass
+        
+        @backrelate({'b':(A,True)})
+        class B(DataObject):
+            pass
+        
+        class C(B):
+            pass
+        
+        class D(A):
+            pass
+        
+        eq_(B.relationships, frozendict({}))
+        eq_(A.relationships, frozendict({'b':(B,True)}))
+        eq_(C.relationships, frozendict({}))
+        eq_(D.relationships, frozendict({'b':(B,True)}))
+
+if __name__ == '__main__':
+    # This code will run the test in this file.'
+    import sys
+    import nose
+    module_name = sys.modules[__name__].__file__
+
+    result = nose.run(argv=[sys.argv[0],
+                            module_name,
+                            '-s','-v'])
     
         

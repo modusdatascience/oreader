@@ -56,4 +56,11 @@ def test_vector_greater_than():
         compare_results(vector_greater_than(cols, vals), cols, vals)
 
 if __name__ == '__main__':
-    test_vector_greater_than()
+    # This code will run the test in this file.'
+    import sys
+    import nose
+    module_name = sys.modules[__name__].__file__
+
+    result = nose.run(argv=[sys.argv[0],
+                            module_name,
+                            '-s','-v'])
