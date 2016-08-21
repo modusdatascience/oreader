@@ -155,8 +155,8 @@ class DateTimeColumn(CsvColumn):
         return datetime.datetime.strftime(value,self.format)
 
 class BooleanColumn(CsvColumn):
-    true_flags = {'1', 1, 't', 'T', 'true', 'True', 1.0, '1.0', '1.'}
-    false_flags = {'0', 0, 'f', 'F', 'false', 'False', 0.0, '0.0', '0.'}
+    true_flags = {'1', 1, 't', 'T', 'true', 'True', 1.0, '1.0', '1.', 'y', 'Y', 'Yes', 'yes', 'YES'}
+    false_flags = {'0', 0, 'f', 'F', 'false', 'False', 0.0, '0.0', '0.', 'n', 'N', 'No', 'no', 'NO'}
     none_flags = {''}
     def convert(self, value):
         try:
