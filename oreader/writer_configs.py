@@ -43,6 +43,8 @@ class SqaDataSink(object):
         self.writer_config = writer_config
         self.file = None
         self.csv_writer = None
+        if self.writer_config.create_table_if_not_exist:
+            self.writer_config.table.metadata.create_all(tables=[self.writer_config.table], checkfirst=True)
         
     def open(self):
         pass
@@ -75,8 +77,9 @@ class CsvWriterConfig(SimpleWriterConfig):
         sink.close()
 
 class SqaWriterConfig(SimpleWriterConfig):
-    def __init__(self, table):
+    def __init__(self, table, create_table_if_not_exist=False):
         self.table = table
+        self.create_table_if_not_exist = create_table_if_not_exist
     
     def translate(self, writer, obj):
         if obj is None:

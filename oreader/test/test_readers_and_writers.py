@@ -396,14 +396,14 @@ def test_read_write():
     administrators_table = table_from_class(Administrator, metadata, 'administrators')
     students_table = table_from_class(Student, metadata, 'students')
     invoices_table = table_from_class(Invoice, metadata, 'invoices')
-    metadata.create_all()
+#     metadata.create_all()
     
     # Define the mapping between tables and objects for writing
-    writer_config = {School: SqaWriterConfig(schools_table),
-                     Teacher: SqaWriterConfig(teachers_table),
-                     Administrator: SqaWriterConfig(administrators_table),
-                     Student: SqaWriterConfig(students_table),
-                     Invoice: SqaWriterConfig(invoices_table)}
+    writer_config = {School: SqaWriterConfig(schools_table, create_table_if_not_exist=True),
+                     Teacher: SqaWriterConfig(teachers_table, create_table_if_not_exist=True),
+                     Administrator: SqaWriterConfig(administrators_table, create_table_if_not_exist=True),
+                     Student: SqaWriterConfig(students_table, create_table_if_not_exist=True),
+                     Invoice: SqaWriterConfig(invoices_table, create_table_if_not_exist=True)}
     
     # Define the mapping between tables and objects for reading
     reader_config = {School: SqaReaderConfig(schools_table, engine),
