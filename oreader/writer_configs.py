@@ -29,6 +29,7 @@ class CsvDataSink(object):
         if self.writer_config.header:
             header = [col.name for col in self.writer.klass.columns]
             self.csv_writer.writerow(header)
+        return self
             
     def write(self, obj):
         row = self.writer_config.translate(self.writer, obj)
@@ -45,7 +46,7 @@ class SqaDataSink(object):
             self.writer_config.table.metadata.create_all(tables=[self.writer_config.table], checkfirst=True)
         
     def open(self):
-        pass
+        return self
             
     def write(self, obj):
         row = self.writer_config.translate(self.writer, obj)
