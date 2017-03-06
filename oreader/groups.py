@@ -13,7 +13,13 @@ class AttributeGroup(BaseAttributeGroup):
         self.attributes = attributes
     
     def emit(self, obj):
-        return self.klass(**{k: getattr(obj, v, None) for k, v in self.attributes.items()})
+        args = {}
+        for k, v in self.attributes.items():
+            if isinstance(v, basestring):
+                args[k] = getattr(obj, v, None)
+            else:
+                args[k] = v(obj)
+        return self.klass(**args)
         
 class AttributeGroupList(BaseAttributeGroup):
     def __init__(self, attribute_groups, filter_function = None):
