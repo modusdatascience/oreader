@@ -51,6 +51,7 @@ class CsvReaderConfig(TupleSimpleReaderConfig):
         return [src for src in self.files]
 
 def safe_collate(col):
+    return col
     return col.collate('"C"') if isinstance(col.type, String) or isinstance(col.type, Text) else col
 
 class SqaReaderState(object):
