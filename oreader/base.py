@@ -56,7 +56,13 @@ class StringColumn(CsvColumn):
     def convert(self, value):
         if value is None:
             return value
-        return unicode(value).encode('utf8').strip() if self.strip else value
+        if type(value) is unicode:
+            val = value.encode('utf8')
+        elif type(value) is str:
+            val = value
+        else:
+            val = str(value)
+        return val.strip() if self.strip else val
 
     def unconvert(self, value):
         if value is None:
