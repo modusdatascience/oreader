@@ -11,6 +11,7 @@ from decimal import Decimal
 from oreader.writers import SimpleWriter, PolymorphicWriter, CompoundWriter,\
     ImplicitWriter
 from oreader.writer_configs import SimpleWriterConfig
+import traceback
 
 class classproperty(property):
     def __get__(self, cls, owner):
@@ -266,7 +267,16 @@ class DataObject(object):
     def __init__(self, **kwargs):
         for column in self.__class__.columns:
             if column.name in kwargs:
-                setattr(self,column.name,column.convert(kwargs[column.name]))
+                try:
+                    converted_value = column.convert(kwargs[column.name])
+                except Exception as e:
+                    traceback.print_exc(e)
+                    try:
+                        error_string = 'Unable to convert value %s for field %s' % (kwargs[column.name], column.name)
+                    except:
+                        error_string = 'Unable to convert value for field %s' % (column.name)
+                    raise ValueError(error_string)
+                setattr(self,column.name,converted_value)
                 del kwargs[column.name]
             else:
                 setattr(self,column.name,None)
