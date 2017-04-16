@@ -9,5 +9,6 @@ setup(name='oreader',
       author='Jason Rudy',
       author_email='jcrudy@gmail.com',
       url='https://github.com/jcrudy/oreader',
-      packages=['oreader']
+      packages=['oreader'],
+      install_requires=['sqlalchemy']
      )
