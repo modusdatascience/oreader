@@ -11,6 +11,7 @@ from decimal import Decimal
 from oreader.writers import SimpleWriter, PolymorphicWriter, CompoundWriter,\
     ImplicitWriter
 from oreader.writer_configs import SimpleWriterConfig
+import unicodedata
 
 class classproperty(property):
     def __get__(self, cls, owner):
@@ -55,8 +56,11 @@ class StringColumn(CsvColumn):
     def convert(self, value):
         if value is None:
             return value
-        return unicode(value).encode('utf8').strip() if self.strip else value
-
+        if isinstance(value, unicode):
+            return unicodedata.normalize('NFKD', value).encode('ascii','ignore').strip() if self.strip else value
+        else:
+            return value.strip() if self.strip else value
+        
     def unconvert(self, value):
         if value is None:
             return None
