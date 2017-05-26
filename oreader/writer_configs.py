@@ -1,6 +1,7 @@
 import csv
 import datetime
 from sqlalchemy.types import Date, DateTime, Time
+from gzip import GzipFile
 
 
 class SimpleWriterConfig(object):
@@ -15,16 +16,23 @@ class DataSink(object):
     
     def close(self):
         raise NotImplementedError
-    
+
+def uncompressed(filename):
+    return open(filename, 'wb')
+
+def gzipped(filename):
+    return GzipFile(filename + '.gz', 'wb')
+
 class CsvDataSink(object):
-    def __init__(self, writer_config, writer):
+    def __init__(self, writer_config, writer, opener=uncompressed):
         self.writer = writer
         self.writer_config = writer_config
         self.file = None
         self.csv_writer = None
+        self.opener = opener
     
     def open(self):
-        self.file = open(self.writer_config.filename, 'wb')
+        self.file = self.opener(self.writer_config.filename)
         self.csv_writer = csv.writer(self.file, **self.writer_config.csv_config)
         if self.writer_config.header:
             header = [col.name for col in self.writer.klass.columns]
@@ -59,10 +67,11 @@ class SqaDataSink(object):
         pass
 
 class CsvWriterConfig(SimpleWriterConfig):
-    def __init__(self, filename, header, csv_config={}):
+    def __init__(self, filename, header, csv_config={}, opener=uncompressed):
         self.filename = filename
         self.header = header
         self.csv_config = csv_config
+        self.opener = opener
     
     def translate(self, writer, obj):
         if obj is None:
@@ -70,7 +79,7 @@ class CsvWriterConfig(SimpleWriterConfig):
         return [col.unconvert(getattr(obj, col.name, None)) for col in writer.klass.columns]
     
     def start_sink(self, writer):
-        return CsvDataSink(self, writer).open()
+        return CsvDataSink(self, writer, opener=self.opener).open()
     
     def stop_sink(self, sink):
         sink.close()
