@@ -132,13 +132,23 @@ class SimpleReader(Reader):
             
     def update(self):
         try:
-            self._peek = self.translate(self.current_source.next())
+            raw = self.current_source.next()
         except StopIteration: # OK
             try:
                 self.next_source()
-                self._peek = self.translate(self.current_source.next())
+                raw = self.current_source.next()
             except StopIteration: # OK
-                self._peek = None
+                raw = None
+        if raw is None:
+            self._peek = None
+        else:
+            try:
+                self._peek = self.translate(raw)
+            except Exception as e:
+                traceback.print_exc(e)
+                raise ValueError('Failed to translate. ' + '\n' + 
+                                 'Class: ' + self.klass.__name__ + '\n' + 
+                                 'Exception: ' +  repr(e))    
 #                 print self.klass, None
 #         print self.klass, self.peek(), self.peek().identity_key()
     
