@@ -50,8 +50,10 @@ class CsvReaderConfig(TupleSimpleReaderConfig):
     def get_sources(self, reader):
         return [src for src in self.files]
 
-def safe_collate(col):
-    return col.collate('"C"') if isinstance(col.type, String) or isinstance(col.type, Text) else col
+def safe_collate(col, collation='"C"'):
+    if collation is None:
+        return col
+    return col.collate(collation) if isinstance(col.type, String) or isinstance(col.type, Text) else col
 
 class SqaReaderState(object):
     def __init__(self, table, engine, klass, starter, filter=True_(), n_tries=float('inf'), wait=0.1, warn_every=10,
@@ -78,7 +80,7 @@ class SqaReaderState(object):
     def create_expression(self):
         if self.last_result is None:
             try:
-                expr = select(self.table.columns).order_by(*[safe_collate(self.table.columns[nm]) for nm in self.sort_key])
+                expr = select(self.table.columns).order_by(*[safe_collate(self.table.columns[nm], None) for nm in self.sort_key])
                 if self.starter is not None:
                     expr = expr.where(and_(self.starter, self.filter))
                 else:
@@ -89,7 +91,7 @@ class SqaReaderState(object):
             try:
                 where_clause = vector_greater_than([self.table.columns[nm] for nm in self.sort_key], \
                                                   [self.last_result[n] for n in self.sort_index])
-                expr = (select(self.table.columns).order_by(*[safe_collate(self.table.columns[nm]) for nm in self.sort_key]) \
+                expr = (select(self.table.columns).order_by(*[safe_collate(self.table.columns[nm], None) for nm in self.sort_key]) \
                        .where(and_(where_clause, self.filter)))
             except:
                 raise
@@ -155,7 +157,7 @@ class SqaReaderState(object):
         self.result_proxy.close()
         
 class SqaReaderConfig(TupleSimpleReaderConfig):
-    def __init__(self, expression, engine, starter=None, filter=True_(), n_tries=float('inf'), wait=0.1, warn_every=10,
+    def __init__(self, expression, engine, starter=None, filter=True_(), n_tries=100, wait=0.1, warn_every=10,
                  limit_per=None, stream=False):
         self.expression = expression
         self.engine = engine
@@ -179,5 +181,5 @@ class SqaReaderConfig(TupleSimpleReaderConfig):
                          limit_per=self.limit_per, stream=self.stream)]
         
     def test_expression(self, klass):
-        expr = select(self.expression.columns).order_by(*[safe_collate(self.expression.columns[nm]) for nm in klass.sort_column_names])
+        expr = select(self.expression.columns).order_by(*[safe_collate(self.expression.columns[nm], None) for nm in klass.sort_column_names])
         return expr
