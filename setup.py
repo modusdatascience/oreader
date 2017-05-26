@@ -10,6 +10,6 @@ setup(name='oreader',
       author_email='jcrudy@gmail.com',
       url='https://github.com/jcrudy/oreader',
       packages=['oreader'],
-      install_requires=['sqlalchemy', 'pandas', 'interval', 'frozendict'],
+      install_requires=['sqlalchemy', 'pandas', 'interval', 'frozendict', 'arrow'],
       tests_require=['names', 'nose']
      )

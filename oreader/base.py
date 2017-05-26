@@ -12,6 +12,8 @@ from oreader.writers import SimpleWriter, PolymorphicWriter, CompoundWriter,\
     ImplicitWriter
 from oreader.writer_configs import SimpleWriterConfig
 import traceback
+import arrow
+from arrow.arrow import Arrow
 
 class classproperty(property):
     def __get__(self, cls, owner):
@@ -112,33 +114,33 @@ class IntegerColumn(CsvColumn):
 class DateColumn(CsvColumn):
     def __init__(self, **kwargs):
         super(DateColumn,self).__init__(**kwargs)
-        self.format = kwargs.get('format', '%Y-%m-%d')
+        self.format = kwargs.get('format', 'YYYY-MM-DD')
         
     def convert(self, value):
         if value is None:
             return value
         if type(value) is datetime.date:
-            return value
+            return arrow.get(value).date()
         if type(value) is datetime.datetime:
-            return value.date()
+            return arrow.get(value).date()
         try:
             value = value.strip()
         except AttributeError:
             pass
         try:
-            return datetime.datetime.strptime(value,self.format).date()
+            return arrow.get(value, self.format).date()
         except ValueError:
             return None
     
     def unconvert(self, value):
         if value is None:
             return None
-        return datetime.datetime.strftime(value,self.format)
+        return arrow.get(value).format(self.format)
 
 class DateTimeColumn(CsvColumn):
     def __init__(self, **kwargs):
         super(DateTimeColumn,self).__init__(**kwargs)
-        self.format = kwargs.get('format', '%Y-%m-%d %H:%M:%S')
+        self.format = kwargs.get('format', 'YYYY-MM-DD HH:mm:ss')
         
     def convert(self, value):
         if value is None:
@@ -152,14 +154,14 @@ class DateTimeColumn(CsvColumn):
         except AttributeError:
             pass
         try:
-            return datetime.datetime.strptime(value,self.format)
+            return arrow.get(value,self.format)
         except ValueError:
             return None
     
     def unconvert(self, value):
         if value is None:
             return None
-        return datetime.datetime.strftime(value,self.format)
+        return arrow.get(value).format(self.format)
 
 class BooleanColumn(CsvColumn):
     true_flags = {'1', 1, 't', 'T', 'true', 'True', 1.0, '1.0', '1.', 'y', 'Y', 'Yes', 'yes', 'YES'}
