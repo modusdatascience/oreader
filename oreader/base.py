@@ -14,6 +14,7 @@ from oreader.writer_configs import SimpleWriterConfig
 import traceback
 import arrow
 from arrow.arrow import Arrow
+from arrow.parser import ParserError
 
 class classproperty(property):
     def __get__(self, cls, owner):
@@ -127,9 +128,11 @@ class DateColumn(CsvColumn):
             value = value.strip()
         except AttributeError:
             pass
+        if not value:
+            return None
         try:
             return arrow.get(value, self.format).date()
-        except ValueError:
+        except (ParserError, ValueError):
             return None
     
     def unconvert(self, value):
@@ -153,9 +156,11 @@ class DateTimeColumn(CsvColumn):
             value = value.strip()
         except AttributeError:
             pass
+        if not value:
+            return None
         try:
             return arrow.get(value,self.format)
-        except ValueError:
+        except (ParserError, ValueError):
             return None
     
     def unconvert(self, value):
