@@ -13,7 +13,6 @@ from oreader.writers import SimpleWriter, PolymorphicWriter, CompoundWriter,\
 from oreader.writer_configs import SimpleWriterConfig
 import traceback
 import arrow
-from arrow.arrow import Arrow
 from arrow.parser import ParserError
 
 class classproperty(property):

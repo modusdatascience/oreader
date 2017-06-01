@@ -1,7 +1,7 @@
 import csv
 from sqlalchemy.sql.elements import True_
 from sqlalchemy.sql.expression import select, and_
-from oreader.util import vector_greater_than
+from .util import vector_greater_than, uncompressed
 import warnings
 import time
 from oreader.readers import DataSourceError
@@ -28,7 +28,7 @@ class CsvSource(object):
         return self.infile.close()
 
 class CsvReaderConfig(TupleSimpleReaderConfig):
-    def __init__(self, files, header, csv_config={}, opener=open, skip=0):
+    def __init__(self, files, header, csv_config={}, opener=uncompressed, skip=0):
         self.files = files
         self.header = header
         self.csv_config = csv_config
@@ -36,7 +36,7 @@ class CsvReaderConfig(TupleSimpleReaderConfig):
         self.skip = skip
         
     def start_source(self, reader, filename):
-        result = CsvSource(self.opener(filename, 'r'), **self.csv_config)
+        result = CsvSource(self.opener(filename, 'rb'), **self.csv_config)
         if self.header:
             result.next()
         if self.skip:

@@ -1,5 +1,6 @@
 from sqlalchemy.sql.elements import Null
 from sqlalchemy.sql.expression import or_, and_
+from gzip import GzipFile
 
 def vector_greater_than(columns, values):
     '''
@@ -22,4 +23,8 @@ def vector_greater_than(columns, values):
         else:
             return columns[0] > values[0]
 
+def uncompressed(filename, flag):
+    return open(filename, flag)
 
+def gzipped(filename, flag):
+    return GzipFile(filename, flag)
