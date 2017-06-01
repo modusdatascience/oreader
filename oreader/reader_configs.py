@@ -29,7 +29,7 @@ class CsvSource(object):
 
 class CsvReaderConfig(TupleSimpleReaderConfig):
     def __init__(self, files, header, csv_config={}, opener=uncompressed, skip=0):
-        self.files = files
+        self.files = [files] if isinstance(files, basestring) else files
         self.header = header
         self.csv_config = csv_config
         self.opener = opener
