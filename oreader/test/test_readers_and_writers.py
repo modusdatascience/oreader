@@ -15,26 +15,11 @@ from frozendict import frozendict
 from nose.tools import assert_list_equal, assert_raises, assert_equal, eq_
 from oreader.groups import create_attribute_group_mixin,\
     AttributeGroup, AttributeGroupList
+from oreader.base import table_from_class
 
 def take(n, iterable):
     "Return first n items of the iterable as a list"
     return list(islice(iterable, n))
-
-def sqa_col(col):
-    if isinstance(col, IntegerColumn):
-        sqa_type = Integer()
-    elif isinstance(col, StringColumn):
-        sqa_type = String()
-    elif isinstance(col, RealColumn):
-        sqa_type = Float()
-    elif isinstance(col, DateColumn):
-        sqa_type = Date()
-    name = col.name
-    return Column(name, sqa_type)
-
-def table_from_class(klass, metadata, name):
-    cols = [sqa_col(col) for col in klass.columns]
-    return Table(name, metadata, *cols)
 
 def create_sqa_connection_handling_case(engine_wrapper, assertion, reader_args={}):
     '''

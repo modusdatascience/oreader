@@ -14,6 +14,9 @@ from oreader.writer_configs import SimpleWriterConfig
 import traceback
 import arrow
 from arrow.parser import ParserError
+from sqlalchemy.sql.sqltypes import Integer, String, Float, Date, DateTime,\
+    Boolean
+from sqlalchemy.sql.schema import Column, Table
 
 class classproperty(property):
     def __get__(self, cls, owner):
@@ -41,7 +44,7 @@ def _relate(cls, relationships):
 def relate(relationships):
     return lambda cls: _relate(cls, relationships)
 
-class CsvColumn(object):
+class OColumn(object):
     def __init__(self, **kwargs):
         self.name = kwargs['name']
         if 'random' in kwargs:
@@ -50,7 +53,11 @@ class CsvColumn(object):
     def draw(self):
         return random.choice(self.random_values)
     
-class StringColumn(CsvColumn):
+    def to_sqa(self):
+        return Column(self.name, self.sqa_type)
+    
+class StringColumn(OColumn):
+    sqa_type = String()
     def __init__(self, **kwargs):
         super(StringColumn,self).__init__(**kwargs)
         self.strip = True if kwargs.get('format', None) == 'strip' else False
@@ -71,7 +78,8 @@ class StringColumn(CsvColumn):
             return None
         return str(value)
     
-class RealColumn(CsvColumn):
+class RealColumn(OColumn):
+    sqa_type = Float()
     def convert(self, value):
         if value is None:
             return value
@@ -91,7 +99,8 @@ class RealColumn(CsvColumn):
             return None
         return str(value)
     
-class IntegerColumn(CsvColumn):
+class IntegerColumn(OColumn):
+    sqa_type = Integer()
     def convert(self, value):
         try:
             value = value.strip()
@@ -111,7 +120,8 @@ class IntegerColumn(CsvColumn):
             return None
         return str(value)
 
-class DateColumn(CsvColumn):
+class DateColumn(OColumn):
+    sqa_type = Date()
     def __init__(self, **kwargs):
         super(DateColumn,self).__init__(**kwargs)
         self.format = kwargs.get('format', 'YYYY-MM-DD')
@@ -139,7 +149,8 @@ class DateColumn(CsvColumn):
             return None
         return arrow.get(value).format(self.format)
 
-class DateTimeColumn(CsvColumn):
+class DateTimeColumn(OColumn):
+    sqa_type = DateTime
     def __init__(self, **kwargs):
         super(DateTimeColumn,self).__init__(**kwargs)
         self.format = kwargs.get('format', 'YYYY-MM-DD HH:mm:ss')
@@ -167,7 +178,8 @@ class DateTimeColumn(CsvColumn):
             return None
         return arrow.get(value).format(self.format)
 
-class BooleanColumn(CsvColumn):
+class BooleanColumn(OColumn):
+    sqa_type = Boolean
     true_flags = {'1', 1, 't', 'T', 'true', 'True', 1.0, '1.0', '1.', 'y', 'Y', 'Yes', 'yes', 'YES'}
     false_flags = {'0', 0, 'f', 'F', 'false', 'False', 0.0, '0.0', '0.', 'n', 'N', 'No', 'no', 'NO'}
     none_flags = {''}
@@ -196,7 +208,7 @@ class BooleanColumn(CsvColumn):
             return None
         return str(value)
     
-class EmptyColumn(CsvColumn):
+class EmptyColumn(OColumn):
     '''
     Ensures that the column never contains data.  If strict, any data in the column
     causes an error.
@@ -273,6 +285,22 @@ def sqa_schema(table):
     for sqa_col in table.columns:
         columns.append(sqa_types[sqa_col.type.python_type](name=sqa_col.name, **sqa_args[sqa_col.type.python_type]))
     return schema(columns)
+
+# def sqa_col(col):
+#     if isinstance(col, IntegerColumn):
+#         sqa_type = Integer()
+#     elif isinstance(col, StringColumn):
+#         sqa_type = String()
+#     elif isinstance(col, RealColumn):
+#         sqa_type = Float()
+#     elif isinstance(col, DateColumn):
+#         sqa_type = Date()
+#     name = col.name
+#     return Column(name, sqa_type)
+
+def table_from_class(klass, metadata, name):
+    cols = [col.to_sqa() for col in klass.columns]
+    return Table(name, metadata, *cols)
 
 class DataObject(object):
     
