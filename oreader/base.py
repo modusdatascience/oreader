@@ -313,8 +313,15 @@ class DataObject(object):
                 setattr(self,k,None)
     
     @classmethod
-    def to_sqa_table(cls, metadata, name):
-        cols = [col.to_sqa() for col in cls.columns]
+    def to_sqa_table(cls, metadata, name, **kwargs):
+        '''
+        Create a sqalchemy Table object corresponding to this class.  Use kwargs to 
+        override any desired columns. 
+        '''
+        bad_kwargs = set(kwargs.keys()) - set(map(lambda col: col.name, cls.columns))
+        if bad_kwargs:
+            raise ValueError('Optional keyword argument names must correspond to field names.  The following names are not compliant: %s' % str(sorted(bad_kwargs)) )
+        cols = [col.to_sqa() if col.name not in kwargs else kwargs[col.name] for col in cls.columns]
         return Table(name, metadata, *cols)
     
     def __getstate__(self):

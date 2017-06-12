@@ -379,8 +379,7 @@ def test_read_write():
     teachers_table = Teacher.to_sqa_table(metadata, 'teachers')
     administrators_table = Administrator.to_sqa_table(metadata, 'administrators')
     students_table = Student.to_sqa_table(metadata, 'students')
-    invoices_table = Invoice.to_sqa_table(metadata, 'invoices')
-#     metadata.create_all()
+    invoices_table = Invoice.to_sqa_table(metadata, 'invoices', contractor_name=Column('contractor_name', String(100))) # Test column overriding
     
     # Define the mapping between tables and objects for writing
     writer_config = {School: SqaWriterConfig(schools_table, create_table_if_not_exist=True),
