@@ -15,7 +15,6 @@ from frozendict import frozendict
 from nose.tools import assert_list_equal, assert_raises, assert_equal, eq_
 from oreader.groups import create_attribute_group_mixin,\
     AttributeGroup, AttributeGroupList
-from oreader.base import table_from_class
 
 def take(n, iterable):
     "Return first n items of the iterable as a list"
@@ -41,7 +40,7 @@ def create_sqa_connection_handling_case(engine_wrapper, assertion, reader_args={
         # Create a test database and table
         engine = create_engine('sqlite://')
         metadata = MetaData(bind=engine)
-        foos_table = table_from_class(Foo, metadata, 'foos')
+        foos_table = Foo.to_sqa_table(metadata, 'foos')
         metadata.create_all()
         
         # Define the mapping between tables and objects for writing
@@ -376,11 +375,11 @@ def test_read_write():
     metadata = MetaData(bind=engine)
     
     
-    schools_table = table_from_class(School, metadata, 'schools')
-    teachers_table = table_from_class(Teacher, metadata, 'teachers')
-    administrators_table = table_from_class(Administrator, metadata, 'administrators')
-    students_table = table_from_class(Student, metadata, 'students')
-    invoices_table = table_from_class(Invoice, metadata, 'invoices')
+    schools_table = School.to_sqa_table(metadata, 'schools')
+    teachers_table = Teacher.to_sqa_table(metadata, 'teachers')
+    administrators_table = Administrator.to_sqa_table(metadata, 'administrators')
+    students_table = Student.to_sqa_table(metadata, 'students')
+    invoices_table = Invoice.to_sqa_table(metadata, 'invoices')
 #     metadata.create_all()
     
     # Define the mapping between tables and objects for writing

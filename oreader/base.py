@@ -286,22 +286,6 @@ def sqa_schema(table):
         columns.append(sqa_types[sqa_col.type.python_type](name=sqa_col.name, **sqa_args[sqa_col.type.python_type]))
     return schema(columns)
 
-# def sqa_col(col):
-#     if isinstance(col, IntegerColumn):
-#         sqa_type = Integer()
-#     elif isinstance(col, StringColumn):
-#         sqa_type = String()
-#     elif isinstance(col, RealColumn):
-#         sqa_type = Float()
-#     elif isinstance(col, DateColumn):
-#         sqa_type = Date()
-#     name = col.name
-#     return Column(name, sqa_type)
-
-def table_from_class(klass, metadata, name):
-    cols = [col.to_sqa() for col in klass.columns]
-    return Table(name, metadata, *cols)
-
 class DataObject(object):
     
     def __init__(self, **kwargs):
@@ -327,6 +311,11 @@ class DataObject(object):
                 setattr(self,k,[])
             else:
                 setattr(self,k,None)
+    
+    @classmethod
+    def to_sqa_table(cls, metadata, name):
+        cols = [col.to_sqa() for col in cls.columns]
+        return Table(name, metadata, *cols)
     
     def __getstate__(self):
         state = {}
