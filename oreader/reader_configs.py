@@ -6,6 +6,7 @@ import warnings
 import time
 from oreader.readers import DataSourceError
 from sqlalchemy.sql.sqltypes import String, Text
+import traceback
 
 class SimpleReaderConfig(object):
     pass
@@ -150,6 +151,7 @@ class SqaReaderState(object):
                         break
                     except Exception as e:
                         if attempt > self.n_tries:
+                            traceback.print_exc()
                             raise DataSourceError(e)
                         attempt += 1
     

@@ -1,10 +1,10 @@
-from interval import Interval, IntervalSet
+from cyinterval.cyinterval import Interval, IntervalSet
 from collections import defaultdict
 
-positive = IntervalSet([Interval(lower = 0, lower_closed=False)])
-nonnegative = IntervalSet([Interval(lower = 0, lower_closed=True)])
-negative = IntervalSet([Interval(upper = 0, upper_closed=False)])
-nonpositive = IntervalSet([Interval(upper = 0, upper_closed=True)])
+positive = IntervalSet(Interval(lower_bound = 0, lower_closed=False))
+nonnegative = IntervalSet(Interval(lower_bound = 0, lower_closed=True))
+negative = IntervalSet(Interval(upper_bound = 0, upper_closed=False))
+nonpositive = IntervalSet(Interval(upper_bound = 0, upper_closed=True))
 
 def all_or_none(collection, attribute, ignore={}):
     if not collection:
