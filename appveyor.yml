@@ -35,14 +35,14 @@ install:
   # Install the build and runtime dependencies of the project.
   - "conda install -y conda-env"
   - "conda env create"
-  - "activate modulecachedev"
+  - "activate oreaderdev"
   - "python setup.py bdist_wheel"
   - ps: "ls"
   - ps: "ls dist"
   
   # Remove the build environment
   - "activate root"
-  - "conda env remove -n modulecachedev -y"
+  - "conda env remove -n oreaderdev -y"
   
 
 # Not a .NET project, we build everything in the install step instead
@@ -50,13 +50,13 @@ build: false
 
 test_script:
   - "conda env create"
-  - "activate modulecachedev"
+  - "activate oreaderdev"
   - ps: "ls"
   - ps: "ls dist"
-  - "pip install modulecache --no-index --find-link dist"
+  - "pip install oreader --no-index --find-link dist"
   - "mkdir empty"
   - "cd empty"
-  - "nosetests -s -v modulecache"
+  - "nosetests -s -v oreader"
   - "cd .."
 
 artifacts:
