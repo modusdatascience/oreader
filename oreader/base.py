@@ -1,7 +1,7 @@
 from abc import abstractmethod
 import pandas
 import datetime
-from readers import PolymorphicReader, CompoundReader, ImplicitReader,\
+from .readers import PolymorphicReader, CompoundReader, ImplicitReader,\
     SimpleReader
 import random
 from frozendict import frozendict
@@ -17,13 +17,14 @@ from arrow.parser import ParserError
 from sqlalchemy.sql.sqltypes import Integer, String, Float, Date, DateTime,\
     Boolean
 from sqlalchemy.sql.schema import Column, Table
+from six import text_type
 
 class classproperty(property):
     def __get__(self, cls, owner):
         return self.fget.__get__(None, owner)()
 
 def _backrelate(cls, relationships):
-    for k, v in relationships.iteritems():
+    for k, v in relationships.items():
         d = {k: tuple([cls] + [v[i] for i in range(1,len(v))])}
         d.update(v[0].relationships)
         v[0].relationships = frozendict(d)
@@ -34,7 +35,7 @@ def backrelate(relationships):
     return lambda cls: _backrelate(cls, relationships)
 
 def _relate(cls, relationships):
-    for k, v in relationships.iteritems():
+    for k, v in relationships.items():
         d = {k: v}
         d.update(cls.relationships)
         cls.relationships = frozendict(d)
@@ -65,10 +66,10 @@ class StringColumn(OColumn):
     def convert(self, value):
         if value is None:
             return value
-        if type(value) is unicode:
-            val = value.encode('utf8')
-        elif type(value) is str:
+        if type(value) is str:
             val = value
+        elif type(value) is text_type:
+            val = value.encode('utf8')
         else:
             val = str(value)
         return val.strip() if self.strip else val
@@ -306,7 +307,7 @@ class DataObject(object):
                 setattr(self,column.name,None)
         if kwargs:
             raise TypeError('Unexpected argument(s) initializing %s: %s' % (self.__class__.__name__, str(kwargs)))
-        for k, v in self.__class__.relationships.iteritems():
+        for k, v in self.__class__.relationships.items():
             if v[1]:
                 setattr(self,k,[])
             else:
@@ -368,11 +369,11 @@ class DataObject(object):
     
     relationships = frozendict()
     
-    @abstractmethod
     @classproperty
     @classmethod
+    @abstractmethod
     def partition_attribute(cls):
-        print cls
+        print(cls)
         raise NotImplementedError
     
     def set_container_key(self, key):
@@ -383,8 +384,8 @@ class DataObject(object):
     @classmethod
     def translate_container_key(cls, key):
         result = {}
-        for k, v in cls.container_key_:
-            result[v] =  key[k]
+        for i, (k, v) in enumerate(cls.container_key_):
+            result[v] = key[i]
         return result
     
     def set_identity_key(self, key):
@@ -395,15 +396,15 @@ class DataObject(object):
     @classmethod
     def translate_identity_key(cls, key):
         result = {}
-        for k, v in cls.identity_key_:
-            result[v] =  key[k]
+        for i, (k, v) in enumerate(cls.identity_key_):
+            result[v] = key[i]
         return result
     
     def container_key(self):
-        return {k: getattr(self, v) for k, v in self.container_key_}
+        return tuple(getattr(self, v) for k, v in self.container_key_)
     
     def identity_key(self):
-        return {k: getattr(self, v) for k, v in self.identity_key_}
+        return tuple(getattr(self, v) for k, v in self.identity_key_)
     
     def sort_key(self):
         return tuple(getattr(self,key) for key in self.sort_key_)

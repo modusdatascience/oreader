@@ -7,6 +7,7 @@ import time
 from oreader.readers import DataSourceError
 from sqlalchemy.sql.sqltypes import String, Text
 import traceback
+from six import next, Iterator, string_types
 
 class SimpleReaderConfig(object):
     pass
@@ -17,20 +18,20 @@ class TupleSimpleReaderConfig(SimpleReaderConfig):
             return None
         return reader.klass(**dict(zip([col.name for col in reader.klass.columns], raw)))
 
-class CsvSource(object):
+class CsvSource(Iterator):
     def __init__(self, infile, **config):
         self.reader = csv.reader(infile, **config)
         self.infile = infile
         
-    def next(self):
-        return self.reader.next()
+    def __next__(self):
+        return next(self.reader)
     
     def close(self):
         return self.infile.close()
 
 class CsvReaderConfig(TupleSimpleReaderConfig):
     def __init__(self, files, header, csv_config={}, opener=uncompressed, skip=0):
-        self.files = [files] if isinstance(files, basestring) else files
+        self.files = [files] if isinstance(files, string_types) else files
         self.header = header
         self.csv_config = csv_config
         self.opener = opener
@@ -39,10 +40,10 @@ class CsvReaderConfig(TupleSimpleReaderConfig):
     def start_source(self, reader, filename):
         result = CsvSource(self.opener(filename, 'rb'), **self.csv_config)
         if self.header:
-            result.next()
+            next(result)
         if self.skip:
             for _ in range(self.skip):
-                result.next()
+                next(result)
         return result
     
     def stop_source(self, reader, source):
@@ -56,7 +57,7 @@ def safe_collate(col, collation='"C"'):
         return col
     return col.collate(collation) if isinstance(col.type, String) or isinstance(col.type, Text) else col
 
-class SqaReaderState(object):
+class SqaReaderState(Iterator):
     def __init__(self, table, engine, klass, starter, filter=True_(), n_tries=float('inf'), wait=0.1, warn_every=10,
                  limit_per=None, stream=True, verbose=False):
         self.table = table
@@ -109,15 +110,15 @@ class SqaReaderState(object):
         self.result_proxy = None
         expr = self.create_expression()
         if self.verbose:
-            print expr
+            print(expr)
         self.result_proxy = self.engine.execute(expr)
         if self.verbose:
-            print 'Okay'
+            print('Okay')
         
 #         if self.stream is not None:
 #             self.result_proxy = self.result_proxy.stream(self.stream)
             
-    def next(self):
+    def __next__(self):
         attempt = 0
         stop_count = 0
         while True:
@@ -132,7 +133,7 @@ class SqaReaderState(object):
                     self.fresh_result_proxy()
                 else:
                     if result is not None and len(result._row) == 0:
-                        print 'EMPTY ROW:', self.klass.__name__, 'after:', self.last_result 
+                        print('EMPTY ROW:', self.klass.__name__, 'after:', self.last_result)
                         raise ValueError()
                     self.last_result = result
                     return result

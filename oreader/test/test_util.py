@@ -6,7 +6,15 @@ import names
 import random
 from sqlalchemy.sql.expression import select
 from oreader.util import vector_greater_than
+from infinity import inf
+from toolz.dicttoolz import valmap
 
+
+def none_to_minus_inf(x):
+    if x is None:
+        return -inf
+    else:
+        return x
 
 def test_vector_greater_than():
     metadata = MetaData()
@@ -30,8 +38,9 @@ def test_vector_greater_than():
     engine = create_engine('sqlite:///:memory:', echo=False)
     metadata.create_all(engine)
     def compare_results(compa, cols, vals):
+        vals = tuple(map(none_to_minus_inf, vals))
         res = set([row['id'] for row in engine.execute(select(table.columns).where(compa))])
-        all_ = [row for row in engine.execute(select(table.columns))]
+        all_ = [valmap(none_to_minus_inf, row) for row in engine.execute(select(table.columns))]
         cor = set()
         for row in all_:
             if tuple(row[col.name] for col in cols) > vals:

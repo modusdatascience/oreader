@@ -3,7 +3,7 @@ from oreader import tools
 
 class Obj:
     def __init__(self, **kwargs):
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             setattr(self, k, v)
 
 def test_all_or_none():

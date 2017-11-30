@@ -1,6 +1,6 @@
 name: oreaderdev
 dependencies:
-    - python=2.7.12
+    - python=3.6.2
     - nose
     - sqlalchemy
     - pandas

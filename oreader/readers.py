@@ -1,5 +1,6 @@
 import warnings
 import traceback
+from six import Iterator
 
 class DataSourceError(Exception):
     '''
@@ -11,27 +12,27 @@ class DataSourceError(Exception):
     def __init__(self, error):
         self.error = error
 
-class ReaderCollection(object):#Done
+class ReaderCollection(Iterator):#Done
     def __init__(self, klasses, config):
         '''
         klasses : (dict) contains name:class pairs
         '''
-        self.readers = dict([(name,klass.reader_class(config)(klass,config)) for name, klass in klasses.iteritems()])
+        self.readers = dict([(name,klass.reader_class(config)(klass,config)) for name, klass in klasses.items()])
         self._peeks = {}
-        for name, reader in self.readers.iteritems():
+        for name, reader in self.readers.items():
             try:
-                self._peeks[name] = reader.next()
+                self._peeks[name] = next(reader)
             except StopIteration: # OK
                 self.readers[name].close()
         self.update()
         
     def report(self):
-        return dict([(name,reader.report()) for name,reader in self.readers.iteritems()])
+        return dict([(name,reader.report()) for name,reader in self.readers.items()])
         
     def update(self):#TODO: This could be made more efficient by maintaining a sort.
         self._peek = None
         if self._peeks:
-            for k, v in self._peeks.iteritems():
+            for k, v in self._peeks.items():
                 if v is not None:
                     if self._peek is None:
                         self._peek = k
@@ -43,14 +44,14 @@ class ReaderCollection(object):#Done
             return None
         return self._peeks[self._peek]
     
-    def next(self):
+    def __next__(self):
         if self._peek is None:
             raise StopIteration
         result = self._peeks[self._peek]
         if result is None:
             raise StopIteration
         try:
-            self._peeks[self._peek] = self.readers[self._peek].next()
+            self._peeks[self._peek] = next(self.readers[self._peek])
         except StopIteration:
             del self._peeks[self._peek]
             self.readers[self._peek].close()
@@ -64,12 +65,12 @@ class ReaderCollection(object):#Done
         for reader in self.readers.values():
             reader.close()
 
-class Reader(object):
+class Reader(Iterator):
     def __init__(self, klass, config):
         self.klass = klass
         self.count = 0
         
-    def next(self):
+    def __next__(self):
         
         result = self.peek()
         
@@ -132,11 +133,11 @@ class SimpleReader(Reader):
             
     def update(self):
         try:
-            raw = self.current_source.next()
+            raw = next(self.current_source)
         except StopIteration: # OK
             try:
                 self.next_source()
-                raw = self.current_source.next()
+                raw = next(self.current_source)
             except StopIteration: # OK
                 raw = None
         if raw is None:
@@ -145,7 +146,7 @@ class SimpleReader(Reader):
             try:
                 self._peek = self.translate(raw)
             except Exception as e:
-                traceback.print_exc(e)
+                traceback.print_exc()
                 raise ValueError('Failed to translate. ' + '\n' + 
                                  'Class: ' + self.klass.__name__ + '\n' + 
                                  'Exception: ' +  repr(e))    
@@ -164,7 +165,7 @@ class CompoundReader(Reader):#Done
     def __init__(self, klass, config):
         super(CompoundReader, self).__init__(klass, config)
         self.simple_reader = SimpleReader(klass, config)
-        self.relatives = dict([(name,group[0]) for name, group in klass.relationships.iteritems()])
+        self.relatives = dict([(name,group[0]) for name, group in klass.relationships.items()])
         self.readers = ReaderCollection(self.relatives, config)
         self.update()
     
@@ -176,14 +177,14 @@ class CompoundReader(Reader):#Done
         if self.simple_reader.peek() is None:
             self._peek = None
             return
-        self._peek = self.simple_reader.next()
+        self._peek = next(self.simple_reader)
         while self.readers.peek() is not None and self.readers.peek().container_key() < self._peek.identity_key():
             warnings.warn('Orphaned %s with key %s.' % (self.readers.peek().__class__.__name__, str(self.readers.peek().identity_key())))
-            self.readers.next()
+            next(self.readers)
         while self.readers.peek() is not None and self.readers.peek().container_key() == self._peek.identity_key():
             found = False
-            item = self.readers.next()
-            for name, group in self.klass.relationships.iteritems():
+            item = next(self.readers)
+            for name, group in self.klass.relationships.items():
                 if isinstance(item, group[0]):
                     if group[1]:
                         getattr(self._peek, name).append(item)
@@ -202,7 +203,7 @@ class ImplicitReader(Reader):#Done
     '''Contains a ReaderCollection.'''
     def __init__(self, klass, config):
         super(ImplicitReader, self).__init__(klass, config)
-        self.relatives = dict([(name,group[0]) for name, group in klass.relationships.iteritems()])
+        self.relatives = dict([(name,group[0]) for name, group in klass.relationships.items()])
         self.readers = ReaderCollection(self.relatives, config)
         self._peek = 1 #An object that is not None
         self.update()
@@ -218,8 +219,8 @@ class ImplicitReader(Reader):#Done
         self._peek = self.klass(**self.klass.translate_identity_key(current_key))
         while self.readers.peek() is not None and self.readers.peek().container_key() == current_key:
             found = False
-            item = self.readers.next()
-            for name, group in self.klass.relationships.iteritems():
+            item = next(self.readers)
+            for name, group in self.klass.relationships.items():
                 if isinstance(item, group[0]):
                     if group[1]:
                         getattr(self._peek, name).append(item)
@@ -253,7 +254,7 @@ class PolymorphicReader(Reader):#Done
     
     def update(self):
         try:
-            self._peek = self.readers.next()
+            self._peek = next(self.readers)
         except StopIteration: # OK
             self._peek = None
     

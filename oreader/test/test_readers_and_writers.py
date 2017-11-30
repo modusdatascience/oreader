@@ -15,6 +15,7 @@ from frozendict import frozendict
 from nose.tools import assert_list_equal, assert_raises, assert_equal, eq_
 from oreader.groups import create_attribute_group_mixin,\
     AttributeGroup, AttributeGroupList
+from builtins import object
 
 def take(n, iterable):
     "Return first n items of the iterable as a list"
@@ -71,19 +72,19 @@ class FaultyResultProxy(object):
         self.failure_generator = failure_generator
     
     def fetchone(self, *args, **kwargs):
-        exc = self.failure_generator.next()
+        exc = next(self.failure_generator)
         if exc:
             raise exc 
         return self.result_proxy.fetchone(*args, **kwargs)
 
     def fetchmany(self, *args, **kwargs):
-        exc = self.failure_generator.next()
+        exc = next(self.failure_generator)
         if exc:
             raise exc 
         return self.result_proxy.fetchmany(*args, **kwargs)
     
     def fetchall(self, *args, **kwargs):
-        exc = self.failure_generator.next()
+        exc = next(self.failure_generator)
         if exc:
             raise exc 
         return self.result_proxy.fetchall(*args, **kwargs)
@@ -95,10 +96,10 @@ class FaultyEngine(object):
         self.proxy_failure_generator_generator = proxy_failure_generator_generator
 
     def execute(self, *args, **kwargs):
-        exc = self.failure_generator.next()
+        exc = next(self.failure_generator)
         if exc:
             raise exc 
-        return FaultyResultProxy(self.engine.execute(*args, **kwargs), self.proxy_failure_generator_generator.next())
+        return FaultyResultProxy(self.engine.execute(*args, **kwargs), next(self.proxy_failure_generator_generator))
 
 def fail_every_n_after_m(m, n, exc_func):
     i = 1
@@ -183,7 +184,7 @@ def test_attribute_groups():
             self.code = code
             self.amount = amount
         
-        def __nonzero__(self):
+        def __bool__(self):
             return self.code is not None
     
     px_codes = [str(i) for i in range(10000)]
@@ -220,9 +221,14 @@ def test_attribute_groups():
     for member in members:
         for claim in member.claims:
             assert len(claim.procedures) in {1, 2, 3}
-            for px in claim.procedures:
-                assert type(px.code) is str
-                assert type(px.amount) is float
+            try:
+                for px in claim.procedures:
+                    assert type(px.code) is str
+                    assert type(px.amount) is float
+            except:
+                for px in claim.procedures:
+                    assert type(px.code) is str
+                    assert type(px.amount) is float
 
 def test_read_write():
     class EduObj(DataObject):

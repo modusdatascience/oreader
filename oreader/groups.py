@@ -1,4 +1,5 @@
 from frozendict import frozendict
+from six import string_types
 
 class BaseAttributeGroup(object):
     def create_property(self, name):
@@ -15,7 +16,7 @@ class AttributeGroup(BaseAttributeGroup):
     def emit(self, obj):
         args = {}
         for k, v in self.attributes.items():
-            if isinstance(v, basestring):
+            if isinstance(v, string_types):
                 args[k] = getattr(obj, v, None)
             else:
                 args[k] = v(obj)
@@ -27,7 +28,8 @@ class AttributeGroupList(BaseAttributeGroup):
         self.filter_function = filter_function
         
     def emit(self, obj):
-        return filter(self.filter_function, [group.emit(obj) for group in self.attribute_groups])
+        full = [group.emit(obj) for group in self.attribute_groups]
+        return list(filter(self.filter_function, full))
     
 class BaseAtrributeGroupMixin(object):
     _attribute_groups = frozendict()
