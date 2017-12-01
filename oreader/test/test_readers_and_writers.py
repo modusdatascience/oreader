@@ -255,7 +255,8 @@ def test_read_write():
             obj.employees = []
             for _ in range(n_employees):
                 obj.employees.append(cls.relationships['employees'][0].random(obj))
-                
+            obj.employees.sort(key=lambda x: (0 if isinstance(x, Administrator) else 1, x.sort_key()))
+            
             n_contractors = np.random.geometric(1/10.)
             obj.contractors = []
             for _ in range(n_contractors):
@@ -453,14 +454,13 @@ class TestRelationships(unittest.TestCase):
         eq_(D.relationships, frozendict({'b':(B,True)}))
 
 if __name__ == '__main__':
-    test_read_write()
-#     # This code will run the test in this file.'
-#     import sys
-#     import nose
-#     module_name = sys.modules[__name__].__file__
-# 
-#     result = nose.run(argv=[sys.argv[0],
-#                             module_name,
-#                             '-s','-v'])
+    # This code will run the test in this file.'
+    import sys
+    import nose
+    module_name = sys.modules[__name__].__file__
+ 
+    result = nose.run(argv=[sys.argv[0],
+                            module_name,
+                            '-s','-v'])
     
         
