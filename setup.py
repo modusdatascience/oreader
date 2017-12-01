@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 import versioneer
 
 
@@ -9,7 +9,7 @@ setup(name='oreader',
       author='Jason Rudy',
       author_email='jcrudy@gmail.com',
       url='https://github.com/jcrudy/oreader',
-      packages=['oreader'],
+      packages=find_packages(),
       install_requires=['sqlalchemy', 'pandas', 'interval', 'frozendict', 'arrow'],
       tests_require=['names', 'nose']
      )
