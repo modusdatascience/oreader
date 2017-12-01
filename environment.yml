@@ -11,4 +11,5 @@ dependencies:
         - interval
         - frozendict
         - arrow
+        - git+https://github.com/jcrudy/cyinterval.git
 
