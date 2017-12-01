@@ -1,6 +1,7 @@
 import warnings
 import traceback
 from six import Iterator
+from _collections import OrderedDict
 
 class DataSourceError(Exception):
     '''
@@ -12,19 +13,29 @@ class DataSourceError(Exception):
     def __init__(self, error):
         self.error = error
 
+def constant(val):
+    def _constant(*args, **kwargs):
+        return val
+    return _constant
+
 class ReaderCollection(Iterator):#Done
-    def __init__(self, klasses, config):
+    def __init__(self, klasses, config, order=constant(0)):
         '''
         klasses : (dict) contains name:class pairs
         '''
-        self.readers = dict([(name,klass.reader_class(config)(klass,config)) for name, klass in klasses.items()])
-        self._peeks = {}
+        self.readers = OrderedDict([(name,klass.reader_class(config)(klass,config)) for name, klass in klasses.items()])
+        self._peeks = OrderedDict()
         for name, reader in self.readers.items():
             try:
                 self._peeks[name] = next(reader)
             except StopIteration: # OK
                 self.readers[name].close()
-        self.update()
+        self.order = order
+        try:
+            self.update()
+        except:
+            1+1
+            raise
         
     def report(self):
         return dict([(name,reader.report()) for name,reader in self.readers.items()])
@@ -36,8 +47,11 @@ class ReaderCollection(Iterator):#Done
                 if v is not None:
                     if self._peek is None:
                         self._peek = k
-                    if v.container_key() < self._peeks[self._peek].container_key():
-                        self._peek = k
+                    elif v.container_key() <= self._peeks[self._peek].container_key():
+                        if self.order(v) < self.order(self._peeks[self._peek]):
+                            self._peek = k
+                        elif v.container_key() < self._peeks[self._peek].container_key():
+                            self._peek = k
         
     def peek(self):
         if self._peek is None:
@@ -165,7 +179,7 @@ class CompoundReader(Reader):#Done
     def __init__(self, klass, config):
         super(CompoundReader, self).__init__(klass, config)
         self.simple_reader = SimpleReader(klass, config)
-        self.relatives = dict([(name,group[0]) for name, group in klass.relationships.items()])
+        self.relatives = OrderedDict([(name,group[0]) for name, group in klass.relationships.items()])
         self.readers = ReaderCollection(self.relatives, config)
         self.update()
     
@@ -203,7 +217,7 @@ class ImplicitReader(Reader):#Done
     '''Contains a ReaderCollection.'''
     def __init__(self, klass, config):
         super(ImplicitReader, self).__init__(klass, config)
-        self.relatives = dict([(name,group[0]) for name, group in klass.relationships.items()])
+        self.relatives = OrderedDict([(name,group[0]) for name, group in klass.relationships.items()])
         self.readers = ReaderCollection(self.relatives, config)
         self._peek = 1 #An object that is not None
         self.update()
@@ -245,14 +259,17 @@ class PolymorphicReader(Reader):#Done
             item = stack.pop()
             stack.extend(item.__subclasses__())
             if item in config:
-                klasses[item.__name__] = item
-        self.readers = ReaderCollection(klasses, config)
+                klasses[item] = item
+        klasses = OrderedDict([(k,klasses[k]) for k in sorted(klasses.keys(), key=klass.typerank())])
+        self.readers = ReaderCollection(klasses, config, klass.objrank())
         self.update()
     
     def report(self):
         return {'subclasses':self.readers.report()}
     
     def update(self):
+        if self.klass.__name__ == 'Employee':
+            1+1
         try:
             self._peek = next(self.readers)
         except StopIteration: # OK

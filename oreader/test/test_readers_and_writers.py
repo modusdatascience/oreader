@@ -453,13 +453,14 @@ class TestRelationships(unittest.TestCase):
         eq_(D.relationships, frozendict({'b':(B,True)}))
 
 if __name__ == '__main__':
-    # This code will run the test in this file.'
-    import sys
-    import nose
-    module_name = sys.modules[__name__].__file__
-
-    result = nose.run(argv=[sys.argv[0],
-                            module_name,
-                            '-s','-v'])
+    test_read_write()
+#     # This code will run the test in this file.'
+#     import sys
+#     import nose
+#     module_name = sys.modules[__name__].__file__
+# 
+#     result = nose.run(argv=[sys.argv[0],
+#                             module_name,
+#                             '-s','-v'])
     
         

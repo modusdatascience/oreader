@@ -4,7 +4,7 @@ import datetime
 from .readers import PolymorphicReader, CompoundReader, ImplicitReader,\
     SimpleReader
 import random
-from frozendict import frozendict
+from frozendict import frozendict, FrozenOrderedDict
 import pickle
 from oreader.reader_configs import SimpleReaderConfig
 from decimal import Decimal
@@ -18,6 +18,7 @@ from sqlalchemy.sql.sqltypes import Integer, String, Float, Date, DateTime,\
     Boolean
 from sqlalchemy.sql.schema import Column, Table
 from six import text_type
+from toolz.dicttoolz import valmap
 
 class classproperty(property):
     def __get__(self, cls, owner):
@@ -27,10 +28,10 @@ def _backrelate(cls, relationships):
     for k, v in relationships.items():
         d = {k: tuple([cls] + [v[i] for i in range(1,len(v))])}
         d.update(v[0].relationships)
-        v[0].relationships = frozendict(d)
+        v[0].relationships = FrozenOrderedDict(d)
         v[0].init_relationships()
     return cls
-        
+
 def backrelate(relationships):
     return lambda cls: _backrelate(cls, relationships)
 
@@ -38,7 +39,7 @@ def _relate(cls, relationships):
     for k, v in relationships.items():
         d = {k: v}
         d.update(cls.relationships)
-        cls.relationships = frozendict(d)
+        cls.relationships = FrozenOrderedDict(d)
     cls.init_relationships()
     return cls
         
@@ -287,6 +288,14 @@ def sqa_schema(table):
         columns.append(sqa_types[sqa_col.type.python_type](name=sqa_col.name, **sqa_args[sqa_col.type.python_type]))
     return schema(columns)
 
+def freeze(obj):
+    if type(obj) is dict:
+        return frozendict(obj.items)
+    elif type(obj) is list:
+        return tuple(obj)
+    else:
+        return obj
+
 class DataObject(object):
     
     def __init__(self, **kwargs):
@@ -342,7 +351,7 @@ class DataObject(object):
         return self.__class__ is other.__class__ and self.__getstate__() == other.__getstate__()
     
     def __hash__(self):
-        return hash(pickle.dumps(self))
+        return hash((self.__class__, frozendict(valmap(freeze, self.__getstate__()).items())))
     
     def to_row(self):
         return [col.unconvert(getattr(self,col.name,None)) for col in self.columns]
@@ -367,7 +376,42 @@ class DataObject(object):
         '''
         pass
     
-    relationships = frozendict()
+    relationships = FrozenOrderedDict()
+    
+    @classmethod
+    def subtypes(cls):
+        stack = [cls]
+        result = []
+        while stack:
+            item = stack.pop()
+            stack.extend(item.__subclasses__())
+            result.append(item)
+        return result
+    
+    @classmethod
+    def typerank(cls):
+        if cls.concrete():
+            d = {cls:0}
+        else:
+            d = {t: i for i, t in enumerate(cls.subtypes())}
+        def _typerank(obj):
+            return d[obj]
+        return _typerank
+    
+    @classmethod
+    def objrank(cls):
+        tr = cls.typerank()
+        def _objrank(obj):
+            return tr(type(obj))
+        return _objrank
+    
+    @classmethod
+    def relationship_sort_key(cls, relationship):
+        klass = cls.relationships[relationship][0]
+        typerank = klass.typerank()
+        def sort_key(obj):
+            return (typerank(type(obj)), obj.sort_key())
+        return sort_key
     
     @classproperty
     @classmethod

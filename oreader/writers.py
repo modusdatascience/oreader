@@ -54,13 +54,17 @@ class ImplicitWriter(Writer):
     def __init__(self, klass, config):
         super(ImplicitWriter, self).__init__(klass, config)
         self.writers = {}
+        self.orders = {}
         for name, (child_class, _) in self.klass.relationships.items():
             self.writers[name] = child_class.writer_class(config)(child_class, config)
-    
+            self.orders[name] = klass.relationship_sort_key(name)
+        
     def write(self, obj):
         for name, (_, plural) in self.klass.relationships.items():
+            if name == 'employees':
+                1+1
             if plural:
-                for child in sorted(getattr(obj, name, []), key=lambda x: x.sort_key()):
+                for child in sorted(getattr(obj, name, []), key=self.orders[name]):
                     self.writers[name].write(child)
             else:
                 child = getattr(obj, name, None)
