@@ -5,6 +5,7 @@ dependencies:
     - sqlalchemy
     - pandas
     - pip:
+        - infinity
         - names
         - interval
         - frozendict
