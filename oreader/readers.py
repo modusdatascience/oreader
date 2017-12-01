@@ -36,7 +36,7 @@ class ReaderCollection(Iterator):#Done
                 if v is not None:
                     if self._peek is None:
                         self._peek = k
-                    if v.container_key() < self._peeks[self._peek].container_key():
+                    if v.sort_key() < self._peeks[self._peek].sort_key():
                         self._peek = k
         
     def peek(self):
