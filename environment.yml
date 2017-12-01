@@ -5,6 +5,7 @@ dependencies:
     - sqlalchemy
     - pandas
     - pip:
+        - toolz
         - infinity
         - names
         - interval
