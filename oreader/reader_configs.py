@@ -38,7 +38,7 @@ class CsvReaderConfig(TupleSimpleReaderConfig):
         self.skip = skip
         
     def start_source(self, reader, filename):
-        result = CsvSource(self.opener(filename, 'rb'), **self.csv_config)
+        result = CsvSource(self.opener(filename, 'rt'), **self.csv_config)
         if self.header:
             next(result)
         if self.skip:
