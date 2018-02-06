@@ -1,7 +1,7 @@
 import warnings
 import traceback
 from six import Iterator
-from _collections import OrderedDict
+from collections import OrderedDict
 
 class DataSourceError(Exception):
     '''
