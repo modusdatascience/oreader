@@ -23,7 +23,7 @@ class CsvDataSink(object):
         self.opener = opener
     
     def open(self):
-        self.file = self.opener(self.writer_config.filename, 'wb')
+        self.file = self.opener(self.writer_config.filename, 'w')
         self.csv_writer = csv.writer(self.file, **self.writer_config.csv_config)
         if self.writer_config.header:
             header = [col.name for col in self.writer.klass.columns]
@@ -49,10 +49,7 @@ class SqaDataSink(object):
             
     def write(self, obj):
         row = self.writer_config.translate(self.writer, obj)
-        try:
-            self.writer_config.table.insert().execute(row)
-        except:
-            self.writer_config.table.insert().execute(row)
+        self.writer_config.table.insert().execute(row)
         
     def close(self):
         pass

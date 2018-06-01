@@ -5,7 +5,6 @@ from .readers import PolymorphicReader, CompoundReader, ImplicitReader,\
     SimpleReader
 import random
 from frozendict import frozendict, FrozenOrderedDict
-import pickle
 from oreader.reader_configs import SimpleReaderConfig
 from decimal import Decimal
 from oreader.writers import SimpleWriter, PolymorphicWriter, CompoundWriter,\
@@ -123,7 +122,7 @@ class IntegerColumn(OColumn):
         return str(value)
 
 class DateColumn(OColumn):
-    sqa_type = Date()
+    sqa_type = Date
     def __init__(self, **kwargs):
         super(DateColumn,self).__init__(**kwargs)
         self.format = kwargs.get('format', 'YYYY-MM-DD')
@@ -171,7 +170,7 @@ class DateTimeColumn(OColumn):
         if not value:
             return None
         try:
-            return arrow.get(value,self.format)
+            return arrow.get(value,self.format).datetime
         except (ParserError, ValueError):
             return None
     
