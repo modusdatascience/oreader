@@ -4,7 +4,7 @@ from nose.tools import assert_equal
 from dateutil.tz.tz import tzutc
 
 def test_datetime_conversion_distant_past():
-    # 
+    # Can any AD date, but not the year 0, which I guess is BC
     col = DateTimeColumn(name='datetime')
     d1 = '2018-06-11 10:02:10'
     d2 = '1018-06-11 10:02:10'
