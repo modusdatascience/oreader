@@ -9,7 +9,7 @@ dependencies:
         - infinity
         - names
         - interval
-        - frozendict
+        - frozendict==1.2
         - arrow
         - git+https://github.com/jcrudy/cyinterval.git
 
