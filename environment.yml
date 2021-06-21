@@ -6,6 +6,7 @@ dependencies:
     - pandas
     - pip:
         - toolz
+        - sqlalchemy==1.3.13
         - infinity
         - names
         - interval
