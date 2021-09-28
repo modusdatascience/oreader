@@ -25,6 +25,9 @@ class frozendict(Mapping):
     def __init__(self, *args, **kwargs):
         self._dict = self.dict_cls(*args, **kwargs)
         self._hash = None
+        
+    def __dict__(self):
+        return self._dict
 
     def __getitem__(self, key):
         return self._dict[key]
