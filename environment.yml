@@ -12,5 +12,4 @@ dependencies:
         - interval
         - arrow
         - git+https://github.com/jcrudy/cyinterval.git
-        - git+ssh://git@github.com/mattlewissf/mfrozendict.git@8cb8e6c5b6570c2fca3a5f5e373b45f65c382eeb
 

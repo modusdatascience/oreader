@@ -4,7 +4,7 @@ import datetime
 from .readers import PolymorphicReader, CompoundReader, ImplicitReader,\
     SimpleReader
 import random
-from mfrozendict.mfrozendict import frozendict, FrozenOrderedDict
+from .mfrozendict import frozendict, FrozenOrderedDict
 from oreader.reader_configs import SimpleReaderConfig
 from decimal import Decimal
 from oreader.writers import SimpleWriter, PolymorphicWriter, CompoundWriter,\
